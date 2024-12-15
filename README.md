@@ -1,5 +1,3 @@
-Sure! Here is the complete text with everything in one block:
-
 ```markdown
 # Data Quality Task App
 
