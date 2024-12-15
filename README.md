@@ -1,4 +1,4 @@
-```markdown
+
 # Data Quality Task App
 
 This is a Python-based web application built using
@@ -25,7 +25,7 @@ Before running the project, make sure you have Python 3.x installed on your syst
 1. **Clone the repository (optional)**
 
    ```bash
-   git clone https://github.com/yourusername/DataQualityProject.git
+   git https://github.com/3bdalrhmanS3d/DataQualityProject.git
    cd DataQualityProject
    ```
 
@@ -115,5 +115,4 @@ Here are the required libraries for this project:
 streamlit
 pandas
 ollama
-```
 ```
