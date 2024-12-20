@@ -37,8 +37,8 @@ def main():
             "2. Describe Dataset",
             "3. Handle Missing Values",
             "4. Handle Duplicates",
-            "5. Handle Outliers",
-            "6. Chat using RAG"
+            
+            "5. Chat using RAG"
         ])
 
     # Dataset Info
@@ -75,17 +75,6 @@ def main():
             st.success("Duplicates removed!")
             st.write(f"Number of duplicate rows after removal: {df.duplicated().sum()}")
 
-    # Handle Outliers
-    def handle_outliers():
-        st.subheader("Handle Outliers")
-        if st.button("Remove Outliers using IQR"):
-            Q1 = df.quantile(0.25)
-            Q3 = df.quantile(0.75)
-            IQR = Q3 - Q1
-            df_outliers_removed = df[~((df < (Q1 - 1.5 * IQR)) | (df > (Q3 + 1.5 * IQR))).any(axis=1)]
-            st.success("Outliers removed using IQR!")
-            st.write(df_outliers_removed.describe())
-            st.dataframe(df_outliers_removed)
 
     # Chat with RAG
     def chat_with_rag():
@@ -186,9 +175,7 @@ def main():
             handle_missing_values()
         elif menu == "4. Handle Duplicates":
             handle_duplicates()
-        elif menu == "5. Handle Outliers":
-            handle_outliers()
-        elif menu == "6. Chat using RAG":
+        elif menu == "5. Chat using RAG":
             chat_with_rag()
         
 

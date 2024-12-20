@@ -40,6 +40,7 @@ def handle_object_column(df, selected_column):
 
     if col_type in ['int64', 'float64']:
         st.write(f"Column '{selected_column}' is numeric.")
+        handle_numeric_column(df, selected_column)
     elif col_type == 'object':
         st.write(f"### Analyzing column: {selected_column}")
         st.write("Unique Values and Frequencies (Before Cleaning):")
@@ -292,4 +293,106 @@ def handle_object_column(df, selected_column):
                         st.warning("No original data found to restore.")
 
 def handle_numeric_column(df, selected_column):
-    return
+    st.subheader(f"Handling Numeric Column: {selected_column}")
+    
+    actions = ["Handle Outliers", "Visualization", "Group By Two Columns"]
+
+    selected_action = st.selectbox("Select Action for Numeric Column", actions, key=f"numeric_action_{selected_column}")
+
+    if selected_action == "Handle Outliers":
+        handle_outliers(df, selected_column)
+
+    elif selected_action == "Visualization":
+        visualizations = ["Histogram", "Box Plot", "Scatter Plot (Choose X-Axis)"]
+        selected_visualization = st.selectbox("Select Visualization Type", visualizations, key=f"visualization_{selected_column}")
+
+        if st.button("Show Visualization", key=f"show_visualization_{selected_column}"):
+            if selected_visualization == "Histogram":
+                st.write("### Histogram")
+                fig, ax = plt.subplots()
+                df[selected_column].plot(kind="hist", bins=20, ax=ax, color="orange", edgecolor="black")
+                ax.set_title(f"Histogram for Column: {selected_column}")
+                ax.set_xlabel("Values")
+                ax.set_ylabel("Frequency")
+                st.pyplot(fig)
+
+            elif selected_visualization == "Box Plot":
+                st.write("### Box Plot")
+                fig, ax = plt.subplots()
+                sns.boxplot(data=df, y=selected_column, ax=ax, color="green")
+                ax.set_title(f"Box Plot for Column: {selected_column}")
+                st.pyplot(fig)
+
+            elif selected_visualization == "Scatter Plot (Choose X-Axis)":
+                st.write("### Scatter Plot")
+                other_columns = [col for col in df.columns if col != selected_column]
+                x_axis_column = st.selectbox("Select X-Axis Column", other_columns, key=f"x_axis_{selected_column}")
+
+                if x_axis_column:
+                    fig, ax = plt.subplots()
+                    sns.scatterplot(data=df, x=x_axis_column, y=selected_column, ax=ax)
+                    ax.set_title(f"Scatter Plot: {selected_column} vs {x_axis_column}")
+                    st.pyplot(fig)
+
+    elif selected_action == "Group By Two Columns":
+        st.write("### Group By Two Columns")
+        other_columns = [col for col in df.columns if col != selected_column]
+        groupby_column = st.selectbox("Select Column to Group By", other_columns, key=f"groupby_{selected_column}")
+
+        if st.button("Show Grouped Data", key=f"show_grouped_{selected_column}"):
+            grouped_df = df.groupby([selected_column, groupby_column]).size().reset_index(name='counts')
+            st.write("Grouped Data:")
+            st.write(grouped_df)
+
+
+def handle_outliers(df, selected_column):
+    st.subheader("Handle Outliers")
+
+    # Initial Visualization
+    st.write("Data Distribution Before Filtering:")
+    fig_before, ax_before = plt.subplots()
+    df[selected_column].plot(kind='box', ax=ax_before)
+    ax_before.set_title(f"Box Plot Before Filtering for {selected_column}")
+    st.pyplot(fig_before)
+
+    # Input for Custom Range with adjusted bounds
+    min_value = st.number_input(
+        f"Enter minimum value to keep for {selected_column}:",
+        value=df[selected_column].min() if not df[selected_column].isnull().all() else 0.0,
+    )
+    max_value = st.number_input(
+        f"Enter maximum value to keep for {selected_column}:",
+        value=df[selected_column].max() if not df[selected_column].isnull().all() else 0.0,
+    )
+
+    if st.button(f"Preview Filtered Data for {selected_column}"):
+        if f"original_{selected_column}" not in st.session_state:
+            st.session_state[f"original_{selected_column}"] = df.copy()
+
+        df_filtered = df[(df[selected_column] >= min_value) & (df[selected_column] <= max_value)].dropna()
+
+        st.session_state[f"preview_filtered_{selected_column}"] = df_filtered
+
+        st.success("Preview of filtered data based on custom range!")
+        st.write("Data Statistics After Filtering:")
+        st.write(df_filtered.describe())
+
+        st.write("Filtered Data Preview:")
+        st.dataframe(df_filtered)
+
+        # Visualization After Filtering
+        st.write("Data Distribution After Filtering:")
+        fig_after, ax_after = plt.subplots()
+        df_filtered[selected_column].plot(kind='box', ax=ax_after)
+        ax_after.set_title(f"Box Plot After Filtering for {selected_column}")
+        st.pyplot(fig_after)
+
+    if st.button(f"Save Filtered Data for {selected_column}"):
+        if f"preview_filtered_{selected_column}" in st.session_state:
+            st.session_state[f"filtered_data_{selected_column}"] = st.session_state[f"preview_filtered_{selected_column}"]
+            st.success(f"Filtered data for column '{selected_column}' has been saved.")
+
+    if st.button(f"Restore Original Data for {selected_column}"):
+        if f"original_{selected_column}" in st.session_state:
+            df[selected_column] = st.session_state[f"original_{selected_column}"][selected_column]
+            st.success(f"Original data for column '{selected_column}' has been restored.")
