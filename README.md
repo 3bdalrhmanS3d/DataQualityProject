@@ -115,4 +115,7 @@ Here are the required libraries for this project:
 streamlit
 pandas
 ollama
+seaborn
+matplotlib
+missingno
 ```
