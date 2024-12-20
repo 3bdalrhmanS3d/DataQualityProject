@@ -7,6 +7,7 @@ import missingno as msno
 
 
 def missing_value_analysis(df):
+
     """Analysis and presentation of lost values using charts"""
     missing_values = df.isnull().sum()
     st.write("Missing Values per Column:")
@@ -34,8 +35,6 @@ def missing_value_analysis(df):
     st.pyplot(fig)
 
     
-
-
 def handle_object_column(df, selected_column):
     col_type = df[selected_column].dtype 
 
@@ -46,18 +45,17 @@ def handle_object_column(df, selected_column):
         st.write("Unique Values and Frequencies (Before Cleaning):")
         st.write(df[selected_column].value_counts(dropna=False))
 
-         # خيارات الإجراء
         actions = [
             "Normalize to lowercase",
             "Replace Specific Values",
             "Convert to Numeric",
             "Visualization",
+            "Delete Rows/Columns"
         ]
         
         selected_action = st.selectbox("Select Action", actions, key=f"action_{selected_column}")
 
         if selected_action == "Normalize to lowercase":
-            # Normalize to lowercase
             if st.button("Apply", key=f"normalize_{selected_column}"):
                 if f"original_{selected_column}" not in st.session_state:
                     st.session_state[f"original_{selected_column}"] = df[selected_column].copy()
@@ -73,7 +71,6 @@ def handle_object_column(df, selected_column):
                 st.write("Unique Values and Frequencies (After Normalization):")
                 st.write(df[selected_column].value_counts(dropna=False))
 
-                # Restore original values
                 if st.button("Restore Original Values", key=f"restore_{selected_column}"):
                     if f"original_{selected_column}" in st.session_state:
                         df[selected_column] = st.session_state[f"original_{selected_column}"]
@@ -85,7 +82,6 @@ def handle_object_column(df, selected_column):
                         st.warning("No original values saved to restore.")
 
         elif selected_action == "Replace Specific Values":
-            # Replace specific values
             st.write("### Replace Specific Values")
             unique_values = df[selected_column].unique()
             replace_from = st.selectbox("Select value to replace:", unique_values, key=f"replace_from_{selected_column}")
@@ -96,7 +92,6 @@ def handle_object_column(df, selected_column):
                     if f"original_{selected_column}" not in st.session_state:
                         st.session_state[f"original_{selected_column}"] = df[selected_column].copy()
 
-                    # Display frequency plot before replacement
                     st.write("Value Frequencies (Before Replacement):")
                     fig, ax = plt.subplots()
                     df[selected_column].value_counts().plot(kind="bar", ax=ax)
@@ -109,7 +104,6 @@ def handle_object_column(df, selected_column):
                     st.session_state["data"] = df
                     st.success(f"Replaced '{replace_from}' with '{replace_to}' in column '{selected_column}'.")
 
-                    # Display frequency plot after replacement
                     st.write("Value Frequencies (After Replacement):")
                     fig, ax = plt.subplots()
                     df[selected_column].value_counts().plot(kind="bar", ax=ax)
@@ -123,7 +117,6 @@ def handle_object_column(df, selected_column):
                 else:
                     st.error("Please provide both 'Replace from' and 'Replace with' values.")
 
-            # Restore original replaced values
             if st.button("Restore Original Replaced Values", key=f"restore_replace_{selected_column}"):
                 if f"original_{selected_column}" in st.session_state:
                     df[selected_column] = st.session_state[f"original_{selected_column}"]
@@ -133,8 +126,8 @@ def handle_object_column(df, selected_column):
                     st.write(df[selected_column].value_counts())
                 else:
                     st.warning("No original values saved to restore.")
+
         elif selected_action == "Convert to Numeric":
-            # Convert to numeric
             if st.button("Convert to Numeric", key=f"convert_numeric_{selected_column}"):
                 if f"original_{selected_column}" not in st.session_state:
                     st.session_state[f"original_{selected_column}"] = df[selected_column].copy()
@@ -148,7 +141,6 @@ def handle_object_column(df, selected_column):
                 except Exception as e:
                     st.error(f"Error converting to numeric: {e}")
 
-            # Restore original numeric column
             if st.button("Restore Original Numeric Values", key=f"restore_numeric_{selected_column}"):
                 if f"original_{selected_column}" in st.session_state:
                     df[selected_column] = st.session_state[f"original_{selected_column}"]
@@ -216,6 +208,88 @@ def handle_object_column(df, selected_column):
                         sns.scatterplot(data=df, x=x_axis_column, y=selected_column, ax=ax)
                         ax.set_title(f"Scatter Plot: {selected_column} vs {x_axis_column}")
                         st.pyplot(fig)
+
+        elif selected_action == "Delete Rows/Columns":
+            st.write("### Delete Rows/Columns")
+            delete_options = ["Delete Rows", "Delete Column"]
+            selected_delete_option = st.selectbox("Select Delete Option", delete_options, key=f"delete_option_{selected_column}")
+
+            if selected_delete_option == "Delete Rows":
+                value_to_delete = st.text_input(
+                    f"Enter value to delete rows where {selected_column} equals this value",
+                    key=f"value_to_delete_{selected_column}"
+                )
+                
+                # Value Matching Rows Display
+                if value_to_delete:
+                    try:
+                        rows_to_delete = df[df[selected_column] == value_to_delete]
+                        st.write("### Rows Matching the Value (Preview):")
+                        st.write(rows_to_delete)
+
+                        # View chart before deletion
+                        st.write("### Visualization Before Deletion:")
+                        fig, ax = plt.subplots()
+                        df[selected_column].value_counts().plot(kind="bar", ax=ax, color="skyblue")
+                        ax.set_title(f"Value Frequencies for Column: {selected_column} (Before Deletion)")
+                        ax.set_xlabel("Values")
+                        ax.set_ylabel("Frequency")
+                        st.pyplot(fig)
+                    except Exception as e:
+                        st.warning(f"Error finding rows with value: {e}")
+
+                # Delete Execution Button
+                if st.button("Delete Rows", key=f"delete_rows_{selected_column}"):
+                    try:
+                        if f"original_data" not in st.session_state:
+                            st.session_state["original_data"] = df.copy()
+
+                        df = df[df[selected_column] != value_to_delete]
+                        st.session_state["data"] = df
+                        st.success(f"Rows where {selected_column} equals '{value_to_delete}' have been deleted.")
+
+                        # View chart after deletion
+                        st.write("### Visualization After Deletion:")
+                        fig, ax = plt.subplots()
+                        df[selected_column].value_counts().plot(kind="bar", ax=ax, color="orange")
+                        ax.set_title(f"Value Frequencies for Column: {selected_column} (After Deletion)")
+                        ax.set_xlabel("Values")
+                        ax.set_ylabel("Frequency")
+                        st.pyplot(fig)
+                    except Exception as e:
+                        st.error(f"Error deleting rows: {e}")
+
+                # Original Values Restoration Button
+                if st.button("Restore Original Data", key=f"restore_rows_{selected_column}"):
+                    if "original_data" in st.session_state:
+                        df = st.session_state["original_data"].copy()
+                        st.session_state["data"] = df
+                        st.success("Original data has been restored.")
+                    else:
+                        st.warning("No original data found to restore.")
+
+            elif selected_delete_option == "Delete Column":
+                # View values before deletion
+                st.write("### Values in Column Before Deletion:")
+                st.write(df[selected_column].head(10))
+
+                # Delete execution button
+                if st.button("Delete Column", key=f"delete_column_{selected_column}"):
+                    if f"original_data" not in st.session_state:
+                        st.session_state["original_data"] = df.copy()
+
+                    df.drop(columns=[selected_column], inplace=True)
+                    st.session_state["data"] = df
+                    st.success(f"Column '{selected_column}' has been deleted.")
+
+                # Original Values Restoration Button
+                if st.button("Restore Original Data", key=f"restore_column_{selected_column}"):
+                    if "original_data" in st.session_state:
+                        df = st.session_state["original_data"].copy()
+                        st.session_state["data"] = df
+                        st.success("Original data has been restored.")
+                    else:
+                        st.warning("No original data found to restore.")
 
 def handle_numeric_column(df, selected_column):
     return
