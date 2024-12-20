@@ -50,37 +50,18 @@ def main():
         st.text(info_string)
 
     # Handling 
+    from HandlingSection import missing_value_analysis, handle_object_column
+
+    # التعامل مع القيم النصية في عمود معين
     def handle_missing_values():
-        # Displays the number of missing values per column. 
-        st.subheader("Handle Missing Values")
-        st.write("Missing Value Summary Before:")
-        
-        st.session_state['missing_analysis_run'] = True
-        if 'missing_analysis_run' in st.session_state and st.session_state['missing_analysis_run']:
-           st.header("Missing Value Analysis")
-           missing_value_analysis(df)
-           st.session_state['missing_analysis_run']= True
+        columns = [col for col in df.columns]
+        selected_column = st.selectbox("Select column to handle:", ["All Columns"] + columns)
 
-        columns_with_missing = [col for col in df.columns if df[col].isnull().sum() > 0]
-        if not columns_with_missing:
-            st.success("No missing values found!")
-            return
-
-        col = st.selectbox("Select column to handle:", columns_with_missing)
-        action = st.radio("Action:", ["Fill with Mean", "Fill with Median", "Fill with Mode", "Drop Rows"])
-
-        if st.button("Apply Action"):
-            if action == "Fill with Mean":
-                df[col].fillna(df[col].mean(), inplace=True)
-            elif action == "Fill with Median":
-                df[col].fillna(df[col].median(), inplace=True)
-            elif action == "Fill with Mode":
-                df[col].fillna(df[col].mode()[0], inplace=True)
-            elif action == "Drop Rows":
-                df.dropna(subset=[col], inplace=True)
-            st.success(f"Applied '{action}' to column '{col}'.")
-            st.write("Missing Value Summary After:")
-            st.write(df.isnull().sum())
+        if selected_column == "All Columns":
+            st.write("### Missing Values Analysis for All Columns")
+            missing_value_analysis(df)
+        else:
+            handle_object_column(df, selected_column)
 
     # Handle Duplicates
     def handle_duplicates():
