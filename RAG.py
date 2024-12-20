@@ -52,7 +52,6 @@ def main():
     # Handling 
     from HandlingSection import missing_value_analysis, handle_object_column
 
-    # التعامل مع القيم النصية في عمود معين
     def handle_missing_values():
         columns = [col for col in df.columns]
         selected_column = st.selectbox("Select column to handle:", ["All Columns"] + columns)
@@ -61,7 +60,10 @@ def main():
             st.write("### Missing Values Analysis for All Columns")
             missing_value_analysis(df)
         else:
-            handle_object_column(df, selected_column)
+            if df[selected_column].dtype in ['int64', 'float64']:
+                handle_numeric_column(df,selected_column )
+            else :
+                handle_object_column(df, selected_column)
 
     # Handle Duplicates
     def handle_duplicates():

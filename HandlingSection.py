@@ -5,6 +5,7 @@ import seaborn as sns
 import missingno as msno
 
 
+
 def missing_value_analysis(df):
     """Analysis and presentation of lost values using charts"""
     missing_values = df.isnull().sum()
@@ -16,7 +17,7 @@ def missing_value_analysis(df):
     fig, ax = plt.subplots()
     msno.bar(df, ax=ax, color="red")
     st.pyplot(fig)
-    
+
     # Bar plot of missing values
     st.write("Missing Values Count Plot:")
     fig, ax = plt.subplots()
@@ -215,3 +216,6 @@ def handle_object_column(df, selected_column):
                         sns.scatterplot(data=df, x=x_axis_column, y=selected_column, ax=ax)
                         ax.set_title(f"Scatter Plot: {selected_column} vs {x_axis_column}")
                         st.pyplot(fig)
+
+def handle_numeric_column(df, selected_column):
+    return
