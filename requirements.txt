@@ -1,4 +1,6 @@
 streamlit
 pandas
 ollama
-StringIO
+seaborn
+matplotlib
+missingno

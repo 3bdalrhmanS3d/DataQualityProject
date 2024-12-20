@@ -49,11 +49,17 @@ def main():
         info_string = buffer.getvalue()  # Get the string content from the buffer
         st.text(info_string)
 
-    # Handle Missing Values
+    # Handling 
     def handle_missing_values():
+        # Displays the number of missing values per column. 
         st.subheader("Handle Missing Values")
         st.write("Missing Value Summary Before:")
-        st.write(df.isnull().sum())
+        
+        st.session_state['missing_analysis_run'] = True
+        if 'missing_analysis_run' in st.session_state and st.session_state['missing_analysis_run']:
+           st.header("Missing Value Analysis")
+           missing_value_analysis(df)
+           st.session_state['missing_analysis_run']= True
 
         columns_with_missing = [col for col in df.columns if df[col].isnull().sum() > 0]
         if not columns_with_missing:
