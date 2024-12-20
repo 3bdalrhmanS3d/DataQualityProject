@@ -49,9 +49,6 @@ def main():
         info_string = buffer.getvalue()  # Get the string content from the buffer
         st.text(info_string)
 
-    # Handling 
-    from HandlingSection import missing_value_analysis, handle_object_column
-
     def handle_missing_values():
         columns = [col for col in df.columns]
         selected_column = st.selectbox("Select column to handle:", ["All Columns"] + columns)
@@ -61,7 +58,7 @@ def main():
             missing_value_analysis(df)
         else:
             if df[selected_column].dtype in ['int64', 'float64']:
-                handle_numeric_column(df,selected_column )
+                HandleNumericColumn(df,selected_column )
             else :
                 handle_object_column(df, selected_column)
 
@@ -186,11 +183,12 @@ def main():
     # Download modified dataset
     if df is not None:
         st.sidebar.download_button(
-            label="Download Modified Dataset",
-            data=df.to_csv(index=False),
-            file_name="modified_dataset.csv",
-            mime="text/csv"
-        )
+        label="Download Dataset with Modifications",
+        data=df.to_csv(index=False),
+        file_name=st.sidebar.text_input("Enter file name (with .csv extension):", value="modified_dataset.csv"),
+        mime="text/csv"
+    )
+
     
 if __name__ == "__main__":
     main()
