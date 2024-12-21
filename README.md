@@ -7,8 +7,8 @@ interface to interact with the dataset and answer questions using a **Retrieval-
 
 For those who wish to try the app, you can access it [here](https://dataqualityproject.streamlit.app/).
 
-
 ## Features
+
 - **Dataset Upload:** Upload CSV or Excel files.
 - **Data Quality Tasks:** Perform the following tasks on the uploaded dataset:
   - Dataset Info: View basic dataset information.
@@ -40,13 +40,15 @@ Before running the project, make sure you have Python 3.12 installed on your sys
 3. **Activate the virtual environment**
 
    On Windows:
+
    ```bash
-      venv\Scripts\activate
+   venv\Scripts\activate
    ```
 
    On macOS/Linux:
+
    ```bash
-      source venv/bin/activate
+   source venv/bin/activate
    ```
 
 4. **Install the required dependencies**
@@ -103,7 +105,7 @@ After performing any changes, you can download the modified dataset by clicking 
 - **Pandas**: For data manipulation and analysis.
 - **Ollama**: For chatbot integration using the RAG model.
 
---- 
+---
 
 ## requirements.txt
 
