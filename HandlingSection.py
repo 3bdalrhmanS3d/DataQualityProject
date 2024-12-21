@@ -194,45 +194,11 @@ def HandleNumericColumn(df, selected_column):
 
     # Action: Visualization
     elif selected_action == "Visualization":
-        visualizations = ["Histogram", "Box Plot", "Scatter Plot"]
-        selected_visualization = st.selectbox("Select Visualization Type", visualizations, key=f"visualization_{selected_column}")
-
-        if st.button("Save and Show Visualization", key=f"save_visualization_{selected_column}"):
-            if selected_visualization == "Histogram":
-                st.write("### Histogram")
-                fig, ax = plt.subplots()
-                df[selected_column].plot(kind="hist", bins=20, ax=ax, color="orange", edgecolor="black")
-                ax.set_title(f"Histogram for Column: {selected_column}")
-                ax.set_xlabel("Values")
-                ax.set_ylabel("Frequency")
-                st.pyplot(fig)
-
-            elif selected_visualization == "Box Plot":
-                st.write("### Box Plot")
-                fig, ax = plt.subplots()
-                sns.boxplot(data=df, y=selected_column, ax=ax, color="green")
-                ax.set_title(f"Box Plot for Column: {selected_column}")
-                st.pyplot(fig)
-
-            elif selected_visualization == "Scatter Plot":
-                other_columns = [col for col in df.columns if col != selected_column]
-                x_axis_column = st.selectbox("Select X-Axis Column", other_columns, key=f"x_axis_{selected_column}")
-
-                if x_axis_column:
-                    fig, ax = plt.subplots()
-                    sns.scatterplot(data=df, x=x_axis_column, y=selected_column, ax=ax)
-                    ax.set_title(f"Scatter Plot: {selected_column} vs {x_axis_column}")
-                    st.pyplot(fig)
+        Visualization(df, selected_column)
 
     # Action: Group By Two Columns
     elif selected_action == "Group By Two Columns":
-        other_columns = [col for col in df.columns if col != selected_column]
-        groupby_column = st.selectbox("Select Column to Group By", other_columns, key=f"groupby_{selected_column}")
-
-        if groupby_column and st.button("Save and Show Grouped Data", key=f"save_grouped_{selected_column}"):
-            grouped_df = df.groupby([selected_column, groupby_column]).size().reset_index(name='counts')
-            st.write("### Grouped Data")
-            st.write(grouped_df)
+        GroupByTwoColumns(df, selected_column)
 
 def ReplaceSpecificValues(df, selected_column):
     st.session_state["data"] = df
@@ -304,7 +270,6 @@ def ConvertToNumeric(df, selected_column):
             st.success(f"Restored original values in column '{selected_column}'.")
         else:
             st.warning("No original values saved to restore.")
-
 
 def RenameColumn(df, selected_column):
     new_column_name = st.text_input(f"Enter new name for column '{selected_column}':", key=f"rename_{selected_column}")
@@ -437,7 +402,9 @@ def restore_column(df, selected_column):
         st.warning(f"No backup found for column '{selected_column}'. Make sure the column was modified.")
 
 def Visualization(df, selected_column):
-    col_type = df[selected_column].dtype 
+    col_type = df[selected_column].dtype
+
+    # Determine visualization options based on column type
     if col_type == 'object':
         visualizations = [
             "Bar Plot (Frequency)",
@@ -447,25 +414,37 @@ def Visualization(df, selected_column):
         visualizations = [
             "Histogram",
             "Box Plot",
-            "Scatter Plot (Choose X-Axis)"
+            "Scatter Plot (Choose X-Axis)",
+            "Line Chart",
+            "Area Chart",
+            "Pair Plot"
         ]
-    
+
     selected_visualization = st.selectbox("Select Visualization Type", visualizations)
+    # Provide a list of palette names for selection
+    available_palettes = ["deep", "muted", "bright", "pastel", "dark", "colorblind"]
+    selected_palette_name = st.selectbox("Select Color Palette", available_palettes)
+
+    # Generate the selected palette
+    color_palette = sns.color_palette(selected_palette_name)
+    show_grid = st.checkbox("Show Gridlines", value=True)
 
     if st.button("Show Visualization"):
         if selected_visualization == "Bar Plot (Frequency)":
             st.write("### Bar Plot (Frequency)")
             fig, ax = plt.subplots()
-            df[selected_column].value_counts().plot(kind="bar", ax=ax, color="skyblue")
+            df[selected_column].value_counts().plot(kind="bar", ax=ax, color=color_palette)
             ax.set_title(f"Bar Plot for Column: {selected_column}")
             ax.set_xlabel("Values")
             ax.set_ylabel("Frequency")
+            if show_grid:
+                ax.grid(True)
             st.pyplot(fig)
 
         elif selected_visualization == "Pie Chart":
             st.write("### Pie Chart")
             fig, ax = plt.subplots()
-            df[selected_column].value_counts().plot(kind="pie", ax=ax, autopct='%1.1f%%', startangle=90, colors=sns.color_palette("pastel"))
+            df[selected_column].value_counts().plot(kind="pie", ax=ax, autopct='%1.1f%%', startangle=90, colors=sns.color_palette(color_palette))
             ax.set_title(f"Pie Chart for Column: {selected_column}")
             ax.set_ylabel("") 
             st.pyplot(fig)
@@ -473,17 +452,21 @@ def Visualization(df, selected_column):
         elif selected_visualization == "Histogram":
             st.write("### Histogram")
             fig, ax = plt.subplots()
-            df[selected_column].plot(kind="hist", bins=20, ax=ax, color="orange", edgecolor="black")
+            df[selected_column].plot(kind="hist", bins=20, ax=ax, color=color_palette, edgecolor="black")
             ax.set_title(f"Histogram for Column: {selected_column}")
             ax.set_xlabel("Values")
             ax.set_ylabel("Frequency")
+            if show_grid:
+                ax.grid(True)
             st.pyplot(fig)
 
         elif selected_visualization == "Box Plot":
             st.write("### Box Plot")
             fig, ax = plt.subplots()
-            sns.boxplot(data=df, y=selected_column, ax=ax, color="green")
+            sns.boxplot(data=df, y=selected_column, ax=ax, color=color_palette)
             ax.set_title(f"Box Plot for Column: {selected_column}")
+            if show_grid:
+                ax.grid(True)
             st.pyplot(fig)
 
         elif selected_visualization == "Scatter Plot (Choose X-Axis)":
@@ -493,6 +476,62 @@ def Visualization(df, selected_column):
 
             if x_axis_column:
                 fig, ax = plt.subplots()
-                sns.scatterplot(data=df, x=x_axis_column, y=selected_column, ax=ax)
+                sns.scatterplot(data=df, x=x_axis_column, y=selected_column, ax=ax, color=color_palette)
                 ax.set_title(f"Scatter Plot: {selected_column} vs {x_axis_column}")
+                if show_grid:
+                    ax.grid(True)
                 st.pyplot(fig)
+
+        elif selected_visualization == "Line Chart":
+            st.write("### Line Chart")
+            fig, ax = plt.subplots()
+            df[selected_column].plot(kind="line", ax=ax, color=color_palette)
+            ax.set_title(f"Line Chart for Column: {selected_column}")
+            ax.set_xlabel("Index")
+            ax.set_ylabel("Values")
+            if show_grid:
+                ax.grid(True)
+            st.pyplot(fig)
+
+        elif selected_visualization == "Area Chart":
+            st.write("### Area Chart")
+            fig, ax = plt.subplots()
+            df[selected_column].plot(kind="area", ax=ax, color=color_palette)
+            ax.set_title(f"Area Chart for Column: {selected_column}")
+            ax.set_xlabel("Index")
+            ax.set_ylabel("Values")
+            if show_grid:
+                ax.grid(True)
+            st.pyplot(fig)
+
+        elif selected_visualization == "Pair Plot":
+            st.write("### Pair Plot")
+            numerical_cols = df.select_dtypes(include=['number']).columns
+            if len(numerical_cols) > 1:
+                fig = sns.pairplot(df[numerical_cols], palette=color_palette)
+                st.pyplot(fig)
+            else:
+                st.error("Not enough numerical columns for a pair plot.")
+
+def GroupByTwoColumns(df, selected_column):
+    """
+    Function to handle grouping by two columns.
+    Works for both numeric and object columns.
+
+    Args:
+        df (DataFrame): The DataFrame containing the data.
+        selected_column (str): The column to group by.
+    """
+    st.subheader(f"Group By Two Columns: {selected_column}")
+
+    # Get other columns to group by
+    other_columns = [col for col in df.columns if col != selected_column]
+    groupby_column = st.selectbox("Select Column to Group By", other_columns, key=f"groupby_{selected_column}")
+
+    if groupby_column and st.button("Save and Show Grouped Data", key=f"save_grouped_{selected_column}"):
+        # Group by selected_column and groupby_column, and count occurrences
+        grouped_df = df.groupby([selected_column, groupby_column]).size().reset_index(name='counts')
+
+        # Display grouped data
+        st.write("### Grouped Data")
+        st.write(grouped_df)
