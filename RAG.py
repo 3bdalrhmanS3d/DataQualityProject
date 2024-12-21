@@ -37,8 +37,8 @@ def main():
             "2. Describe Dataset",
             "3. Handle Missing Values",
             "4. Handle Duplicates",
-            "5. Advanced Data Analysis"
-            "6. Chat using RAG",
+            "5. Advanced Data Analysis",
+            "6. Chat using RAG" 
             
         ])
 
