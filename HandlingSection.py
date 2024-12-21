@@ -3,6 +3,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import missingno as msno
+from sklearn.ensemble import RandomForestClassifier
+from scipy.stats import ttest_ind
+from collections import namedtuple
+from dataclasses import dataclass
 
 def restore_original(df, key):
     """Generic function to restore original data"""
@@ -535,3 +539,68 @@ def GroupByTwoColumns(df, selected_column):
         # Display grouped data
         st.write("### Grouped Data")
         st.write(grouped_df)
+
+@dataclass
+class AnalysisConfig:
+    features_to_include: list
+    test_type: str
+    significance_level: float = 0.05
+
+# Use namedtuple to provide structured and easy-to-read analysis results.
+CorrelationResult = namedtuple('CorrelationResult', ['correlation_matrix', 'features'])
+
+def correlation_analysis(df, features):
+    """Perform correlation analysis on selected features"""
+    st.subheader("Correlation Analysis")
+    correlation_matrix = df[features].corr()
+    st.write("Correlation Matrix:")
+    st.dataframe(correlation_matrix)
+    fig, ax = plt.subplots(figsize=(10, 8))
+    sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', ax=ax)
+    st.pyplot(fig)
+    return CorrelationResult(correlation_matrix=correlation_matrix, features=features)
+
+FeatureImportanceResult = namedtuple('FeatureImportanceResult', ['importance_scores', 'model_name'])
+def feature_importance(df, target_column):
+    """Calculate feature importance using RandomForestClassifier"""
+    st.subheader("Feature Importance Analysis")
+    X = df.drop(columns=[target_column])
+    y = df[target_column]
+    model = RandomForestClassifier()
+    model.fit(X, y)
+    importance_scores = model.feature_importances_
+    feature_importance_df = pd.DataFrame({
+        'Feature': X.columns,
+        'Importance': importance_scores
+    }).sort_values(by='Importance', ascending=False)
+    st.write("Feature Importance Scores:")
+    st.dataframe(feature_importance_df)
+    fig, ax = plt.subplots(figsize=(10, 8))
+    sns.barplot(x='Importance', y='Feature', data=feature_importance_df, ax=ax)
+    st.pyplot(fig)
+    return FeatureImportanceResult(importance_scores=dict(zip(X.columns, importance_scores)), model_name="RandomForestClassifier")
+
+StatisticalTestResult = namedtuple('StatisticalTestResult', ['test_statistic', 'p_value', 'null_hypothesis', 'alternative_hypothesis', 'significant'])
+def statistical_tests(df, config: AnalysisConfig):
+    """Perform statistical tests on selected features"""
+    st.subheader("Statistical Tests")
+    features = config.features_to_include
+    if len(features) != 2:
+        st.error("Please select exactly two features for the statistical test.")
+        return None
+    feature1, feature2 = features
+    if config.test_type == "t-test":
+        test_statistic, p_value = ttest_ind(df[feature1].dropna(), df[feature2].dropna())
+        significant = p_value < config.significance_level
+        result = StatisticalTestResult(
+            test_statistic=test_statistic,
+            p_value=p_value,
+            null_hypothesis=f"There is no significant difference between {feature1} and {feature2}.",
+            alternative_hypothesis=f"There is a significant difference between {feature1} and {feature2}.",
+            significant=significant
+        )
+        st.write(f"T-Test Result: {result}")
+        return result
+    else:
+        st.error("Unsupported test type.")
+        return None

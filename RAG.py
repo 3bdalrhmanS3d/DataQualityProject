@@ -37,8 +37,9 @@ def main():
             "2. Describe Dataset",
             "3. Handle Missing Values",
             "4. Handle Duplicates",
+            "5. Advanced Data Analysis"
+            "6. Chat using RAG",
             
-            "5. Chat using RAG"
         ])
 
     # Dataset Info
@@ -61,6 +62,24 @@ def main():
                 HandleNumericColumn(df,selected_column )
             else :
                 handle_object_column(df, selected_column)
+
+    def AdvancedDataAnalysis():
+        analysis_type = st.selectbox("Select Analysis Type", ["Correlation Analysis", "Feature Importance", "Statistical Tests"])
+        if analysis_type == "Correlation Analysis":
+            features = st.multiselect("Select features for correlation analysis", df.columns)
+            if features:
+                correlation_analysis(df, features)
+        elif analysis_type == "Feature Importance":
+            target_column = st.selectbox("Select target column for feature importance analysis", df.columns)
+            if target_column:
+                feature_importance(df, target_column)
+        elif analysis_type == "Statistical Tests":
+            features = st.multiselect("Select two features for statistical test", df.columns)
+            test_type = st.selectbox("Select test type", ["t-test"])
+            significance_level = st.slider("Select significance level", 0.01, 0.10, 0.05)
+            config = AnalysisConfig(significance_level=significance_level, test_type=test_type, features_to_include=features)
+            if features:
+                statistical_tests(df, config)
 
     # Handle Duplicates
     def handle_duplicates():
@@ -172,7 +191,9 @@ def main():
             handle_missing_values()
         elif menu == "4. Handle Duplicates":
             handle_duplicates()
-        elif menu == "5. Chat using RAG":
+        elif menu == "5. Advanced Data Analysis":
+            AdvancedDataAnalysis()
+        elif menu == "6. Chat using RAG":
             chat_with_rag()
         
 

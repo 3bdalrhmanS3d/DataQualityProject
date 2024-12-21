@@ -4,3 +4,4 @@ ollama
 seaborn
 matplotlib
 missingno
+scikit-learn
