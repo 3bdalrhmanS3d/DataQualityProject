@@ -1,9 +1,12 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import missingno as msno
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, LabelEncoder
+from sklearn.compose import ColumnTransformer
 from scipy.stats import ttest_ind
 from collections import namedtuple
 from dataclasses import dataclass
@@ -94,6 +97,7 @@ def handle_object_column(df, selected_column):
         "Normalize to Lowercase",
         "Replace Specific Values",
         "Convert to Numeric",
+        "Transform",
         "Visualization",
         "Delete Rows/Columns" ]
 
@@ -107,6 +111,8 @@ def handle_object_column(df, selected_column):
         ReplaceSpecificValues(df, selected_column)
     elif selected_action == "Convert to Numeric":
         ConvertToNumeric(df, selected_column)
+    elif selected_action == "Transform":
+        handle_transformations(df, selected_column)
     elif selected_action == "Visualization":
         Visualization(df, selected_column)
     elif selected_action == "Delete Rows/Columns":
@@ -619,3 +625,98 @@ def statistical_tests(df, config: AnalysisConfig):
     else:
         st.error("Unsupported test type.")
         return None
+
+class DataTransformation:
+    def __init__(self, df):
+        self.df = df
+        self.original_df = df.copy()
+        self.transformers = {}
+
+    def transform_column(self, column, transform_type, params=None):
+            """Transform a single column based on specified type"""
+            try:
+                if transform_type == "one_hot":
+                    encoded_cols = pd.get_dummies(self.df[column], prefix=column)
+                    # Update the original dataframe with encoded columns
+                    self.df = pd.concat([self.df.drop(columns=[column]), encoded_cols], axis=1)
+                    st.session_state["data"] = self.df
+                    return encoded_cols
+                
+                elif transform_type == "label":
+                    le = LabelEncoder()
+                    self.transformers[column] = le
+                    return pd.Series(le.fit_transform(self.df[column]), name=column)
+                
+                elif transform_type == "minmax":
+                    scaler = MinMaxScaler()
+                    self.transformers[column] = scaler
+                    return pd.Series(scaler.fit_transform(self.df[[column]]).flatten(), name=column)
+                
+                elif transform_type == "standard":
+                    scaler = StandardScaler()
+                    self.transformers[column] = scaler
+                    return pd.Series(scaler.fit_transform(self.df[[column]]).flatten(), name=column)
+                
+                elif transform_type == "log":
+                    return pd.Series(np.log1p(self.df[column]), name=column)
+                
+            except Exception as e:
+                st.error(f"Transformation error: {str(e)}")
+                return None
+            
+def handle_transformations(df, selected_column):
+    """Handle transformations for selected column"""
+    st.subheader(f"Transform Column: {selected_column}")
+    
+    # Initialize transformer
+    transformer = DataTransformation(df)
+    
+    # Select transformation type based on data type
+    if df[selected_column].dtype == 'object':
+        transform_options = ["one_hot", "label"]
+    else:
+        transform_options = ["minmax", "standard", "log"]
+        
+    transform_type = st.selectbox(
+        "Select Transformation Type",
+        transform_options,
+        help="Choose the type of transformation to apply"
+    )
+    
+    # Preview button
+    if st.button("Preview Transformation"):
+        try:
+            # Save original state if not already saved
+            if f"original_{selected_column}" not in st.session_state:
+                st.session_state[f"original_{selected_column}"] = df[selected_column].copy()
+            preview = transformer.transform_column(selected_column, transform_type)
+            if preview is not None:
+                st.write("Preview of transformed data:")
+                st.dataframe(preview.head())
+                
+                # Show statistics
+                st.write("Statistics after transformation:")
+                st.dataframe(preview.describe())
+                
+                # Apply transformation button
+                if st.button("Apply Transformation"):
+                    if transform_type == "one_hot":
+                        # Drop original and add encoded columns
+                        df.drop(columns=[selected_column], inplace=True)
+                        for col in preview.columns:
+                            df[col] = preview[col]
+                    else:
+                        df[selected_column] = preview
+                    
+                    st.success(f"Transformation applied to {selected_column}")
+                    st.session_state["data"] = df
+                    
+        except Exception as e:
+            st.error(f"Error during transformation: {str(e)}")
+    
+    # Restore original button
+    if st.button("Restore Original"):
+        if f"original_{selected_column}" in st.session_state:
+            df[selected_column] = st.session_state[f"original_{selected_column}"]
+            st.success(f"Restored original values for {selected_column}")
+            st.session_state["data"] = df
