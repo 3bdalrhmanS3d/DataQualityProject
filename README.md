@@ -5,6 +5,9 @@ This is a Python-based web application built using
 and outliers in datasets, The app also integrates with **Ollama** for a chatbot
 interface to interact with the dataset and answer questions using a **Retrieval-Augmented Generation (RAG)** model.
 
+For those who wish to try the app, you can access it [here](https://dataqualityproject.streamlit.app/).
+
+
 ## Features
 - **Dataset Upload:** Upload CSV or Excel files.
 - **Data Quality Tasks:** Perform the following tasks on the uploaded dataset:
