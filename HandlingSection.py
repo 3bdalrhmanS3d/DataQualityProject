@@ -107,14 +107,12 @@ def NormalizeColumn(df, selected_column):
     st.subheader(f"Normalize Column: {selected_column}")
     st.write("### Normalization Options")
 
-    # خيارات التعديلات
     apply_strip = st.checkbox("Remove leading and trailing spaces (strip)", value=True, key=f"strip_{selected_column}")
     apply_lowercase = st.checkbox("Convert to lowercase", value=True, key=f"lowercase_{selected_column}")
     apply_replace_char = st.checkbox("Replace specific character", value=False, key=f"replace_char_{selected_column}")
     apply_replace_spaces = st.checkbox("Replace spaces", value=False, key=f"replace_spaces_{selected_column}")
     apply_remove_all_spaces = st.checkbox("Remove all spaces from text", value=False, key=f"remove_all_spaces_{selected_column}")
 
-    # إدخال القيم للتعديل
     char_to_replace = None
     replacement_character = None
     if apply_replace_char:
@@ -125,12 +123,31 @@ def NormalizeColumn(df, selected_column):
     if apply_replace_spaces:
         space_replacement = st.text_input("Enter the character to replace spaces with (default: _):", value="_", key=f"replacement_char_{selected_column}")
 
-    # تطبيق التعديلات
-    if st.button("Apply Normalization", key=f"apply_normalization_{selected_column}"):
+    if st.button("Apply Normalization (Preview Only)", key=f"apply_normalization_{selected_column}"):
+        # Create a preview without altering the actual data
+        preview_df = df.copy()
+        try:
+            if apply_strip:
+                preview_df[selected_column] = preview_df[selected_column].str.strip()
+            if apply_lowercase:
+                preview_df[selected_column] = preview_df[selected_column].str.lower()
+            if apply_replace_char and char_to_replace and replacement_character:
+                preview_df[selected_column] = preview_df[selected_column].str.replace(char_to_replace, replacement_character, regex=False)
+            if apply_replace_spaces and space_replacement:
+                preview_df[selected_column] = preview_df[selected_column].str.replace(" ", space_replacement, regex=False)
+            if apply_remove_all_spaces:
+                preview_df[selected_column] = preview_df[selected_column].str.replace(" ", "", regex=False)
+
+            st.write("Unique Values and Frequencies (Preview After Normalization):")
+            st.write(preview_df[selected_column].value_counts(dropna=False))
+        except Exception as e:
+            st.error(f"An error occurred during normalization: {e}")
+
+    if st.button("Save Changes", key=f"save_{selected_column}"):
         if f"original_{selected_column}" not in st.session_state:
             st.session_state[f"original_{selected_column}"] = df[selected_column].copy()
 
-        # تطبيق التعديلات حسب الخيارات
+        # Apply changes and save
         try:
             if apply_strip:
                 df[selected_column] = df[selected_column].str.strip()
@@ -144,18 +161,17 @@ def NormalizeColumn(df, selected_column):
                 df[selected_column] = df[selected_column].str.replace(" ", "", regex=False)
 
             st.session_state["data"] = df
-            st.success(f"Normalization applied to column '{selected_column}'.")
-            st.write("Unique Values and Frequencies (After Normalization):")
+            st.success(f"Normalization changes saved for column '{selected_column}'.")
+            st.write("Unique Values and Frequencies (After Saving):")
             st.write(df[selected_column].value_counts(dropna=False))
         except Exception as e:
-            st.error(f"An error occurred during normalization: {e}")
+            st.error(f"An error occurred during saving: {e}")
 
-    # استعادة القيم الأصلية
     if st.button("Restore Original Values", key=f"restore_{selected_column}"):
         if f"original_{selected_column}" in st.session_state:
             df[selected_column] = st.session_state[f"original_{selected_column}"]
             st.session_state["data"] = df
-            st.success(f"Restored original values in column '{selected_column}'.")
+            st.success(f"Restored original values for column '{selected_column}'.")
             st.write("Unique Values and Frequencies (After Restoration):")
             st.write(df[selected_column].value_counts())
         else:
@@ -163,22 +179,25 @@ def NormalizeColumn(df, selected_column):
 
 def HandleNumericColumn(df, selected_column):
     st.subheader(f"Handling Numeric Column: {selected_column}")
-    
-    actions = [ "Rename Column","Handle Outliers", "Visualization", "Group By Two Columns"]
 
+    # Define actions
+    actions = ["Rename Column", "Handle Outliers", "Visualization", "Group By Two Columns"]
     selected_action = st.selectbox("Select Action for Numeric Column", actions, key=f"numeric_action_{selected_column}")
 
-    if selected_action == "Rename Column" :
-            RenameColumn(df, selected_column)
+    # Action: Rename Column
+    if selected_action == "Rename Column":
+        RenameColumn(df, selected_column)
 
+    # Action: Handle Outliers
     elif selected_action == "Handle Outliers":
         HandleOutliers(df, selected_column)
 
+    # Action: Visualization
     elif selected_action == "Visualization":
-        visualizations = ["Histogram", "Box Plot", "Scatter Plot (Choose X-Axis)"]
+        visualizations = ["Histogram", "Box Plot", "Scatter Plot"]
         selected_visualization = st.selectbox("Select Visualization Type", visualizations, key=f"visualization_{selected_column}")
 
-        if st.button("Show Visualization", key=f"show_visualization_{selected_column}"):
+        if st.button("Save and Show Visualization", key=f"save_visualization_{selected_column}"):
             if selected_visualization == "Histogram":
                 st.write("### Histogram")
                 fig, ax = plt.subplots()
@@ -195,8 +214,7 @@ def HandleNumericColumn(df, selected_column):
                 ax.set_title(f"Box Plot for Column: {selected_column}")
                 st.pyplot(fig)
 
-            elif selected_visualization == "Scatter Plot (Choose X-Axis)":
-                st.write("### Scatter Plot")
+            elif selected_visualization == "Scatter Plot":
                 other_columns = [col for col in df.columns if col != selected_column]
                 x_axis_column = st.selectbox("Select X-Axis Column", other_columns, key=f"x_axis_{selected_column}")
 
@@ -206,14 +224,14 @@ def HandleNumericColumn(df, selected_column):
                     ax.set_title(f"Scatter Plot: {selected_column} vs {x_axis_column}")
                     st.pyplot(fig)
 
+    # Action: Group By Two Columns
     elif selected_action == "Group By Two Columns":
-        st.write("### Group By Two Columns")
         other_columns = [col for col in df.columns if col != selected_column]
         groupby_column = st.selectbox("Select Column to Group By", other_columns, key=f"groupby_{selected_column}")
 
-        if st.button("Show Grouped Data", key=f"show_grouped_{selected_column}"):
+        if groupby_column and st.button("Save and Show Grouped Data", key=f"save_grouped_{selected_column}"):
             grouped_df = df.groupby([selected_column, groupby_column]).size().reset_index(name='counts')
-            st.write("Grouped Data:")
+            st.write("### Grouped Data")
             st.write(grouped_df)
 
 def ReplaceSpecificValues(df, selected_column):
@@ -222,7 +240,7 @@ def ReplaceSpecificValues(df, selected_column):
     replace_from = st.selectbox("Select value to replace:", unique_values, key=f"replace_from_{selected_column}")
     replace_to = st.text_input("Replace with:", key=f"replace_to_{selected_column}")
 
-    if st.button("Apply Replacement", key=f"apply_replace_{selected_column}"):
+    if st.button("Save and Apply Replacement", key=f"save_apply_replace_{selected_column}"):
         if replace_from and replace_to:
             if f"original_{selected_column}" not in st.session_state:
                 st.session_state[f"original_{selected_column}"] = df[selected_column].copy()
@@ -235,6 +253,7 @@ def ReplaceSpecificValues(df, selected_column):
             ax.set_ylabel("Frequency")
             st.pyplot(fig)
 
+            # Apply replacement
             df[selected_column] = df[selected_column].replace(replace_from, replace_to)
             st.session_state["data"] = df
             st.success(f"Replaced '{replace_from}' with '{replace_to}' in column '{selected_column}'.")
@@ -252,7 +271,7 @@ def ReplaceSpecificValues(df, selected_column):
         else:
             st.error("Please provide both 'Replace from' and 'Replace with' values.")
 
-    if st.button("Restore Original Replaced Values", key=f"restore_replace_{selected_column}"):
+    if st.button("Restore Original Values", key=f"restore_replace_{selected_column}"):
         if f"original_{selected_column}" in st.session_state:
             df[selected_column] = st.session_state[f"original_{selected_column}"]
             st.session_state["data"] = df
@@ -265,7 +284,7 @@ def ReplaceSpecificValues(df, selected_column):
 def ConvertToNumeric(df, selected_column):
     st.session_state["data"] = df
 
-    if st.button("Convert to Numeric", key=f"convert_numeric_{selected_column}"):
+    if st.button("Save and Convert to Numeric", key=f"save_convert_numeric_{selected_column}"):
         if f"original_{selected_column}" not in st.session_state:
             st.session_state[f"original_{selected_column}"] = df[selected_column].copy()
 
@@ -278,13 +297,14 @@ def ConvertToNumeric(df, selected_column):
         except Exception as e:
             st.error(f"Error converting to numeric: {e}")
 
-        if st.button("Restore Original Numeric Values", key=f"restore_numeric_{selected_column}"):
-            if f"original_{selected_column}" in st.session_state:
-                df[selected_column] = st.session_state[f"original_{selected_column}"]
-                st.session_state["data"] = df
-                st.success(f"Restored original values in column '{selected_column}'.")
-            else:
-                st.warning("No original values saved to restore.")
+    if st.button("Restore Original Values", key=f"restore_numeric_{selected_column}"):
+        if f"original_{selected_column}" in st.session_state:
+            df[selected_column] = st.session_state[f"original_{selected_column}"]
+            st.session_state["data"] = df
+            st.success(f"Restored original values in column '{selected_column}'.")
+        else:
+            st.warning("No original values saved to restore.")
+
 
 def RenameColumn(df, selected_column):
     new_column_name = st.text_input(f"Enter new name for column '{selected_column}':", key=f"rename_{selected_column}")
