@@ -64,17 +64,20 @@ def main():
                 handle_object_column(df, selected_column)
 
     def AdvancedDataAnalysis():
+        numerical_columns = [col for col in df.select_dtypes(include=[float, int]).columns]
         analysis_type = st.selectbox("Select Analysis Type", ["Correlation Analysis", "Feature Importance", "Statistical Tests"])
         if analysis_type == "Correlation Analysis":
-            features = st.multiselect("Select features for correlation analysis", df.columns)
+            features = st.multiselect("Select features for correlation analysis", numerical_columns )
             if features:
                 correlation_analysis(df, features)
+            
         elif analysis_type == "Feature Importance":
-            target_column = st.selectbox("Select target column for feature importance analysis", df.columns)
+            target_column = st.selectbox("Select target column for feature importance analysis", numerical_columns)
             if target_column:
                 feature_importance(df, target_column)
+                
         elif analysis_type == "Statistical Tests":
-            features = st.multiselect("Select two features for statistical test", df.columns)
+            features = st.multiselect("Select two features for statistical test", numerical_columns )
             test_type = st.selectbox("Select test type", ["t-test"])
             significance_level = st.slider("Select significance level", 0.01, 0.10, 0.05)
             config = AnalysisConfig(significance_level=significance_level, test_type=test_type, features_to_include=features)

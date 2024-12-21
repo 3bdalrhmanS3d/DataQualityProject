@@ -8,6 +8,12 @@ from scipy.stats import ttest_ind
 from collections import namedtuple
 from dataclasses import dataclass
 
+@dataclass
+class AnalysisConfig:
+    features_to_include: list
+    test_type: str
+    significance_level: float = 0.05
+
 def restore_original(df, key):
     """Generic function to restore original data"""
     if key in st.session_state:
@@ -540,12 +546,6 @@ def GroupByTwoColumns(df, selected_column):
         st.write("### Grouped Data")
         st.write(grouped_df)
 
-@dataclass
-class AnalysisConfig:
-    features_to_include: list
-    test_type: str
-    significance_level: float = 0.05
-
 # Use namedtuple to provide structured and easy-to-read analysis results.
 CorrelationResult = namedtuple('CorrelationResult', ['correlation_matrix', 'features'])
 
@@ -599,7 +599,22 @@ def statistical_tests(df, config: AnalysisConfig):
             alternative_hypothesis=f"There is a significant difference between {feature1} and {feature2}.",
             significant=significant
         )
-        st.write(f"T-Test Result: {result}")
+        
+        # Create a DataFrame for better table display
+        results_df = pd.DataFrame({
+            'Metric': ['Test Statistic', 'P-Value', 'Significance Level', 'Significant?', 'Null Hypothesis', 'Alternative Hypothesis'],
+            'Value': [
+                f"{test_statistic:.4f}",
+                f"{p_value:.4f}",
+                f"{config.significance_level}",
+                "Yes" if significant else "No",
+                result.null_hypothesis,
+                result.alternative_hypothesis
+            ]
+        })
+        
+        st.write("Statistical Test Results:")
+        st.table(results_df)
         return result
     else:
         st.error("Unsupported test type.")
