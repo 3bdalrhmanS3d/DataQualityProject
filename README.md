@@ -1,5 +1,4 @@
-
-# Data Quality Task App
+# Data Quality App
 
 This is a Python-based web application built using
 **Streamlit** for performing common data quality tasks such as handling missing values, duplicates,
@@ -18,57 +17,57 @@ interface to interact with the dataset and answer questions using a **Retrieval-
 
 ## Prerequisites
 
-Before running the project, make sure you have Python 3.x installed on your system.
+Before running the project, make sure you have Python 3.12 installed on your system.
 
 ## Installation
 
 1. **Clone the repository (optional)**
 
    ```bash
-   git https://github.com/3bdalrhmanS3d/DataQualityProject.git
-   cd DataQualityProject
+      git https://github.com/3bdalrhmanS3d/DataQualityProject.git
+      cd DataQualityProject
    ```
 
 2. **Create a virtual environment**
 
    ```bash
-   python -m venv venv
+      python -m venv venv
    ```
 
 3. **Activate the virtual environment**
 
    On Windows:
    ```bash
-   venv\Scripts\activate
+      venv\Scripts\activate
    ```
 
    On macOS/Linux:
    ```bash
-   source venv/bin/activate
+      source venv/bin/activate
    ```
 
 4. **Install the required dependencies**
 
    ```bash
-   pip install -r requirements.txt
+      pip install -r requirements.txt
    ```
 
    Alternatively, install the required libraries manually:
 
    ```bash
-   pip install streamlit pandas ollama
+      pip install streamlit pandas ollama
    ```
 
 5. **Verify the installed libraries**
 
    ```bash
-   pip list
+      pip list
    ```
 
 6. **Run the Streamlit app**
 
    ```bash
-   streamlit run RAG.py
+      streamlit run RAG.py
    ```
 
    The app will open in your default web browser.
@@ -96,26 +95,22 @@ After performing any changes, you can download the modified dataset by clicking 
 
 ## Requirements
 
-- **Python 3.x**
+- **Python 3.12**
 - **Streamlit**: For creating the web interface.
 - **Pandas**: For data manipulation and analysis.
 - **Ollama**: For chatbot integration using the RAG model.
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
+--- 
 
 ## requirements.txt
 
 Here are the required libraries for this project:
 
 ```txt
-streamlit
-pandas
-ollama
-seaborn
-matplotlib
-missingno
+   streamlit
+   pandas
+   ollama
+   seaborn
+   matplotlib
+   missingno
 ```
