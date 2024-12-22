@@ -3,7 +3,6 @@ import pandas as pd
 import ollama
 from io import StringIO
 from HandlingSection import *
-from Lib import *
 
 def main():
     # App Title
