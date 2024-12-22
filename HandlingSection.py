@@ -10,6 +10,7 @@ from sklearn.compose import ColumnTransformer
 from scipy.stats import ttest_ind
 from collections import namedtuple
 from dataclasses import dataclass
+from PredictionManager import * 
 
 @dataclass
 class AnalysisConfig:
@@ -40,7 +41,7 @@ def missing_value_analysis(df):
     
     # Display summary with improved formatting
     st.write("Missing Values Summary:")
-    st.dataframe(missing_summary.style.background_gradient(cmap='YlOrRd'))
+    st.table(missing_summary.style.background_gradient(cmap='YlOrRd'))
 
     # Visualization options
     viz_type = st.selectbox(
@@ -634,17 +635,34 @@ def GroupByTwoColumns(df, selected_column):
 
 # Use namedtuple to provide structured and easy-to-read analysis results.
 CorrelationResult = namedtuple('CorrelationResult', ['correlation_matrix', 'features'])
-
-def correlation_analysis(df, features):
-    """Perform correlation analysis on selected features"""
+def correlation_analysis(df, target_column):
+    """Perform correlation analysis on all columns and user-selected features."""
     st.subheader("Correlation Analysis")
-    correlation_matrix = df[features].corr()
-    st.write("Correlation Matrix:")
-    st.dataframe(correlation_matrix)
-    fig, ax = plt.subplots(figsize=(10, 8))
-    sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', ax=ax)
-    st.pyplot(fig)
-    return CorrelationResult(correlation_matrix=correlation_matrix, features=features)
+    
+    # All Columns Correlation
+    st.write("### Correlation Matrix for All Columns")
+    correlation_matrix_all = df.corr()  # Calculate correlation for all numerical columns
+    st.table(correlation_matrix_all)
+    fig_all, ax_all = plt.subplots(figsize=(10, 8))
+    sns.heatmap(correlation_matrix_all, annot=True, cmap='coolwarm', ax=ax_all)
+    st.pyplot(fig_all)
+    
+    # Custom Features Correlation
+    st.write("### Custom Correlation Analysis")
+    numerical_columns = df.select_dtypes(include=['float64', 'int64']).columns
+    selected_features = st.multiselect("Select Features for Correlation Analysis", numerical_columns)
+    
+    if selected_features:
+        st.write("Correlation Matrix for Selected Features")
+        correlation_matrix_custom = df[selected_features].corr()
+        st.table(correlation_matrix_custom)
+        fig_custom, ax_custom = plt.subplots(figsize=(10, 8))
+        sns.heatmap(correlation_matrix_custom, annot=True, cmap='coolwarm', ax=ax_custom)
+        st.pyplot(fig_custom)
+        return CorrelationResult(correlation_matrix=correlation_matrix_custom, features=selected_features)
+    else:
+        st.warning("Please select at least one feature for custom correlation analysis.")
+        return None
 
 FeatureImportanceResult = namedtuple('FeatureImportanceResult', ['importance_scores', 'model_name'])
 def feature_importance(df, target_column):
@@ -660,7 +678,7 @@ def feature_importance(df, target_column):
         'Importance': importance_scores
     }).sort_values(by='Importance', ascending=False)
     st.write("Feature Importance Scores:")
-    st.dataframe(feature_importance_df)
+    st.table(feature_importance_df)
     fig, ax = plt.subplots(figsize=(10, 8))
     sns.barplot(x='Importance', y='Feature', data=feature_importance_df, ax=ax)
     st.pyplot(fig)

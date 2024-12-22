@@ -3,6 +3,7 @@ import pandas as pd
 import ollama
 from io import StringIO
 from HandlingSection import *
+from Lib import *
 
 def main():
     # App Title
@@ -38,7 +39,8 @@ def main():
             "3. Handle Missing Values",
             "4. Handle Duplicates",
             "5. Advanced Data Analysis",
-            "6. Chat using RAG" 
+            "6. Make Predictions",
+            "7. Chat using RAG" 
             
         ])
 
@@ -196,8 +198,9 @@ def main():
             handle_duplicates()
         elif menu == "5. Advanced Data Analysis":
             AdvancedDataAnalysis()
-       
-        elif menu == "6. Chat using RAG":
+        elif menu == "6. Make Predictions":
+            predict_new_use_case(df)
+        elif menu == "7. Chat using RAG":
             chat_with_rag()
         
 
