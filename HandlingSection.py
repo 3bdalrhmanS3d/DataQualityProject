@@ -79,33 +79,43 @@ def handle_object_column(df, selected_column):
         
         if search_term:
             filtered_counts = value_counts[value_counts.index.str.contains(search_term, na=False, case=False)]
-            st.dataframe(filtered_counts)
+            st.table(filtered_counts)
         else:
-            st.dataframe(value_counts)
-        
-        # Download button for value counts
-        st.download_button(
-            label="Download Value Counts CSV",
-            data=value_counts.to_csv().encode('utf-8'),
-            file_name=f'{selected_column}_value_counts.csv',
-            mime='text/csv'
-        )
+            st.write(f"Unique Values and Frequencies: { value_counts.count() }")   
+            st.table(value_counts)
 
     if df[selected_column].dtype == 'object':
         actions = [
         "Rename Column",
-        "Normalize to Lowercase",
+        "Normalize",
         "Replace Specific Values",
         "Convert to Numeric",
         "Transform",
         "Visualization",
         "Delete Rows/Columns" ]
 
-    selected_action = st.selectbox("Select Action to Perform:", actions, key=f"action_{selected_column}")
+    # Dictionary to hold descriptions of each action
+    action_descriptions = {
+        "Rename Column": "Allows you to rename the selected column.",
+        "Normalize": "Scales the data in the selected column to a standard range (e.g., 0 to 1).",
+        "Replace Specific Values": "Replaces specific values in the selected column with new values.",
+        "Convert to Numeric": "Converts the selected column to a numeric format, handling non-numeric entries.",
+        "Transform": "Applies transformations like logarithmic, square root, or custom operations to the column.",
+        "Visualization": "Generates visualizations for the data in the selected column (e.g., histograms, line charts).",
+        "Delete Rows/Columns": "Deletes specific rows or columns based on your selection."
+    }
 
+    selected_action = st.selectbox(
+        f"Select Action to Perform for {selected_column}:",
+        actions,
+        key=f"action_{selected_column}_unique"
+    )
+    description = action_descriptions.get(selected_action, "No description available for this action.")
+    st.write(f"**Description:** {description}")
+    
     if selected_action == "Rename Column":
         RenameColumn(df, selected_column)
-    elif selected_action == "Normalize to Lowercase":
+    elif selected_action == "Normalize":
         NormalizeColumn(df, selected_column)
     elif selected_action == "Replace Specific Values":
         ReplaceSpecificValues(df, selected_column)
@@ -123,11 +133,44 @@ def NormalizeColumn(df, selected_column):
     st.subheader(f"Normalize Column: {selected_column}")
     st.write("### Normalization Options")
 
-    apply_strip = st.checkbox("Remove leading and trailing spaces (strip)", value=True, key=f"strip_{selected_column}")
-    apply_lowercase = st.checkbox("Convert to lowercase", value=True, key=f"lowercase_{selected_column}")
-    apply_replace_char = st.checkbox("Replace specific character", value=False, key=f"replace_char_{selected_column}")
-    apply_replace_spaces = st.checkbox("Replace spaces", value=False, key=f"replace_spaces_{selected_column}")
-    apply_remove_all_spaces = st.checkbox("Remove all spaces from text", value=False, key=f"remove_all_spaces_{selected_column}")
+    st.markdown("**Normalization allows you to clean and standardize the values in the selected column.** Below are the available options:")
+
+    apply_strip = st.checkbox(
+        "Remove leading and trailing spaces (strip)",
+        value=True,
+        key=f"strip_{selected_column}",
+        help="This option removes any spaces at the beginning or end of the text in the column."
+    )
+    apply_lowercase = st.checkbox(
+        "Convert to lowercase",
+        value=True,
+        key=f"lowercase_{selected_column}",
+        help="This option converts all text in the column to lowercase."
+    )
+    apply_uppercase = st.checkbox(
+        "Convert to uppercase",
+        value=True,
+        key=f"uppercase_{selected_column}",
+        help="This option converts all text in the column to uppercase."
+    )
+    apply_replace_char = st.checkbox(
+        "Replace specific character",
+        value=False,
+        key=f"replace_char_{selected_column}",
+        help="This option allows you to replace a specific character in the column with another character."
+    )
+    apply_replace_spaces = st.checkbox(
+        "Replace spaces",
+        value=False,
+        key=f"replace_spaces_{selected_column}",
+        help="This option replaces spaces in the column with a character of your choice."
+    )
+    apply_remove_all_spaces = st.checkbox(
+        "Remove all spaces from text",
+        value=False,
+        key=f"remove_all_spaces_{selected_column}",
+        help="This option removes all spaces from the text in the column."
+    )
 
     char_to_replace = None
     replacement_character = None
@@ -137,7 +180,12 @@ def NormalizeColumn(df, selected_column):
 
     space_replacement = "_"
     if apply_replace_spaces:
-        space_replacement = st.text_input("Enter the character to replace spaces with (default: _):", value="_", key=f"replacement_char_{selected_column}")
+        space_replacement = st.text_input(
+            "Enter the character to replace spaces with (default: _):",
+            value="_",
+            key=f"replacement_char_{selected_column}",
+            help="Specify the character that will replace spaces in the column."
+        )
 
     if st.button("Apply Normalization (Preview Only)", key=f"apply_normalization_{selected_column}"):
         # Create a preview without altering the actual data
@@ -147,6 +195,8 @@ def NormalizeColumn(df, selected_column):
                 preview_df[selected_column] = preview_df[selected_column].str.strip()
             if apply_lowercase:
                 preview_df[selected_column] = preview_df[selected_column].str.lower()
+            if apply_uppercase:
+                preview_df[selected_column] = preview_df[selected_column].str.upper()
             if apply_replace_char and char_to_replace and replacement_character:
                 preview_df[selected_column] = preview_df[selected_column].str.replace(char_to_replace, replacement_character, regex=False)
             if apply_replace_spaces and space_replacement:
@@ -169,6 +219,8 @@ def NormalizeColumn(df, selected_column):
                 df[selected_column] = df[selected_column].str.strip()
             if apply_lowercase:
                 df[selected_column] = df[selected_column].str.lower()
+            if apply_uppercase:
+                df[selected_column] = df[selected_column].str.upper()
             if apply_replace_char and char_to_replace and replacement_character:
                 df[selected_column] = df[selected_column].str.replace(char_to_replace, replacement_character, regex=False)
             if apply_replace_spaces and space_replacement:
@@ -271,11 +323,11 @@ def ConvertToNumeric(df, selected_column):
             st.session_state[f"original_{selected_column}"] = df[selected_column].copy()
 
         try:
-            df[selected_column] = pd.to_numeric(df[selected_column], errors="coerce")
+            df[selected_column] = pd.to_numeric(df[selected_column].replace(r'[^\d.]', '', regex=True), errors="coerce")
             st.session_state["data"] = df
             st.success(f"Converted column '{selected_column}' to numeric.")
             st.write("Column Statistics (After Conversion):")
-            st.write(df[selected_column].describe())
+            st.table(df[selected_column].describe())
         except Exception as e:
             st.error(f"Error converting to numeric: {e}")
 
