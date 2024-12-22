@@ -249,7 +249,7 @@ def HandleNumericColumn(df, selected_column):
     st.subheader(f"Handling Numeric Column: {selected_column}")
 
     # Define actions
-    actions = ["Rename Column", "Handle Outliers", "Visualization", "Group By Two Columns", "Delete Rows/Columns"]
+    actions = ["Rename Column", "Handle Outliers", "Visualization", "Group By Two Columns"]
     selected_action = st.selectbox("Select Action for Numeric Column", actions, key=f"numeric_action_{selected_column}")
 
 
@@ -257,21 +257,18 @@ def HandleNumericColumn(df, selected_column):
     if selected_action == "Rename Column":
         RenameColumn(df, selected_column)
 
-    # Action: Handle Outliers
-    elif selected_action == "Handle Outliers":
-        HandleOutliers(df, selected_column)
 
     # Action: Visualization
     elif selected_action == "Visualization":
         Visualization(df, selected_column)
+    
+    elif selected_action == "Handle Outliers":
+        HandleOutliers(df, selected_column)
 
     # Action: Group By Two Columns
     elif selected_action == "Group By Two Columns":
         GroupByTwoColumns(df, selected_column)
 
-    elif selected_action == "Delete Rows/Columns":
-        DeleteRowsColumns(df, selected_column)
-    
 def ReplaceSpecificValues(df, selected_column):
     st.session_state["data"] = df
     unique_values = df[selected_column].unique()
@@ -353,8 +350,46 @@ def RenameColumn(df, selected_column):
         else:
             st.error("Please provide a new column name.")
 
+def outlier_analysis(df, column):
+    """Identifies and displays outliers using the IQR method."""
+    q1 = df[column].quantile(0.25)
+    q3 = df[column].quantile(0.75)
+    iqr = q3 - q1
+    lower_bound = q1 - 1.5 * iqr
+    upper_bound = q3 + 1.5 * iqr
+    outliers = df[(df[column] < lower_bound) | (df[column] > upper_bound)]
+    st.write(f"Number of outliers in {column}: {len(outliers)}")
+    if not outliers.empty:
+        st.write(outliers)
+        show_outliers_vis = st.checkbox("Show outliers visualization", key='show_outliers_vis')
+        if show_outliers_vis:
+            fig, ax = plt.subplots()
+            sns.boxplot(x=df[column], ax=ax)
+            sns.scatterplot(x=outliers[column], y=[0]*len(outliers), color='red', marker='o', ax=ax)
+            plt.title(f"Box Plot of {column} with Outliers highlighted")
+            st.pyplot(fig)
+    return lower_bound, upper_bound
+
+def handle_outliers(df, column, lower_bound, upper_bound, method):
+    """Handles outliers based on the selected method."""
+    if method == 'clip':
+        df[column] = df[column].clip(lower=lower_bound, upper=upper_bound)
+        st.success(f"Outliers in {column} have been clipped to the defined bounds.")
+    elif method == 'drop':
+        df.drop(df[(df[column] < lower_bound) | (df[column] > upper_bound)].index, inplace=True)
+        st.success(f"Outliers in {column} have been removed.")
+    else:
+        st.error("Invalid method for handling outliers.")
+    return df
+
+
 def HandleOutliers(df, selected_column):
     st.subheader("Handle Outliers")
+    st.session_state["data"] = df
+
+    # Save original data if not already saved
+    if f"original_{selected_column}" not in st.session_state:
+        st.session_state[f"original_{selected_column}"] = df[selected_column].copy()
 
     # Initial Visualization
     st.write("Data Distribution Before Filtering:")
@@ -363,46 +398,35 @@ def HandleOutliers(df, selected_column):
     ax_before.set_title(f"Box Plot Before Filtering for {selected_column}")
     st.pyplot(fig_before)
 
-    # Input for Custom Range with adjusted bounds
-    min_value = st.number_input(
-        f"Enter minimum value to keep for {selected_column}:",
-        value=df[selected_column].min() if not df[selected_column].isnull().all() else 0.0,
-    )
-    max_value = st.number_input(
-        f"Enter maximum value to keep for {selected_column}:",
-        value=df[selected_column].max() if not df[selected_column].isnull().all() else 0.0,
-    )
+    lower_bound, upper_bound = outlier_analysis(df, selected_column)
+    if lower_bound is not None and upper_bound is not None:
+        outlier_method = st.selectbox("Select Outlier Handling Method", ['clip', 'drop'])
 
     if st.button(f"Preview Filtered Data for {selected_column}"):
-        if f"original_{selected_column}" not in st.session_state:
-            st.session_state[f"original_{selected_column}"] = df.copy()
-
-        df_filtered = df[(df[selected_column] >= min_value) & (df[selected_column] <= max_value)].dropna()
-
-        st.session_state[f"preview_filtered_{selected_column}"] = df_filtered
+        df = handle_outliers(df, selected_column, lower_bound, upper_bound, outlier_method)
+        st.session_state[f"preview_filtered_{selected_column}"] = df[selected_column].copy()
 
         st.success("Preview of filtered data based on custom range!")
         st.write("Data Statistics After Filtering:")
-        st.write(df_filtered.describe())
+        st.write(df.describe())
 
         st.write("Filtered Data Preview:")
-        st.dataframe(df_filtered)
+        st.dataframe(df)
 
         # Visualization After Filtering
         st.write("Data Distribution After Filtering:")
         fig_after, ax_after = plt.subplots()
-        df_filtered[selected_column].plot(kind='box', ax=ax_after)
+        df[selected_column].plot(kind='box', ax=ax_after)
         ax_after.set_title(f"Box Plot After Filtering for {selected_column}")
         st.pyplot(fig_after)
 
     if st.button(f"Save Filtered Data for {selected_column}"):
         if f"preview_filtered_{selected_column}" in st.session_state:
-            st.session_state[f"filtered_data_{selected_column}"] = st.session_state[f"preview_filtered_{selected_column}"]
+            st.session_state[f"filtered_data_{selected_column}"] = st.session_state[f"preview_filtered_{selected_column}"].copy()
             st.success(f"Filtered data for column '{selected_column}' has been saved.")
+            st.session_state["data"] = df
 
-    if st.button(f"Restore Original Data for {selected_column}"):
-        if f"original_{selected_column}" in st.session_state:
-            restore_column(df, selected_column)
+    
             
 def DeleteRowsColumns(df, selected_column):
     st.write("### Delete Rows/Columns")
@@ -776,3 +800,65 @@ def handle_transformations(df, selected_column):
             df[selected_column] = st.session_state[f"original_{selected_column}"]
             st.success(f"Restored original values for {selected_column}")
             st.session_state["data"] = df
+
+def replace_column_values(df, selected_column):
+    
+    action = st.selectbox(
+        "Select action to apply:",
+        [
+            "Fill with Mean",
+            "Fill with Median",
+            "Fill with Mode",
+            "Fill NaN based on Categorical Target"
+        ]
+    )
+    st.session_state["data"] = df
+    if action == "Fill NaN based on Categorical Target":
+            target_col = st.selectbox("Select Categorical Target Column", df.columns)
+
+            # Ensure the target column is not one of the selected columns
+            if target_col in selected_column:
+                st.warning("The target column cannot be one of the selected columns. Please select a different column.")
+            else:
+                fill_action = st.selectbox("Choose fill action:", ["Mean", "Median", "Mode"])
+                
+                if fill_action == "Mean":
+                    df[selected_column] = df.groupby(target_col)[selected_column].transform(lambda x: x.fillna(x.mean()))
+                elif fill_action == "Median":
+                    df[selected_column] = df.groupby(target_col)[selected_column].transform(lambda x: x.fillna(x.median()))
+                elif fill_action == "Mode":
+                    df[selected_column] = df.groupby(target_col)[selected_column].transform(lambda x: x.fillna(x.mode()[0]))
+
+            st.write(f"Filled NaN values in selected columns based on the '{target_col}' column using {fill_action}.")
+
+    else:
+        
+        if action == "Fill with Mean":
+            df[selected_column].fillna(df[selected_column].mean(), inplace=True)
+        elif action == "Fill with Median":
+            df[selected_column].fillna(df[selected_column].median(), inplace=True)
+        elif action == "Fill with Mode":
+            df[selected_column].fillna(df[selected_column].mode()[0], inplace=True)
+                
+                    
+
+    if st.button("Save and Convert to Numeric", key=f"save_convert_numeric_{selected_column}"):
+        if f"original_{selected_column}" not in st.session_state:
+            st.session_state[f"original_{selected_column}"] = df[selected_column].copy()
+
+        try:
+            
+            st.session_state["data"] = df
+            st.success(f"Converted column '{selected_column}' to {action}.")
+            st.write("Column Statistics (After Conversion):")
+            st.write(df[selected_column].describe())
+        except Exception as e:
+            st.error(f"Error converting to numeric: {e}")
+
+    if st.button("Restore Original Values", key=f"restore_numeric_{selected_column}"):
+        if f"original_{selected_column}" in st.session_state:
+            df[selected_column] = st.session_state[f"original_{selected_column}"]
+            st.session_state["data"] = df
+            st.success(f"Restored original values in column '{selected_column}'.")
+        else:
+            st.warning("No original values saved to restore.")
