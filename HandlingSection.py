@@ -252,6 +252,7 @@ def HandleNumericColumn(df, selected_column):
     actions = ["Rename Column", "Handle Outliers", "Visualization", "Group By Two Columns"]
     selected_action = st.selectbox("Select Action for Numeric Column", actions, key=f"numeric_action_{selected_column}")
 
+    
     # Action: Rename Column
     if selected_action == "Rename Column":
         RenameColumn(df, selected_column)
