@@ -249,10 +249,10 @@ def HandleNumericColumn(df, selected_column):
     st.subheader(f"Handling Numeric Column: {selected_column}")
 
     # Define actions
-    actions = ["Rename Column", "Handle Outliers", "Visualization", "Group By Two Columns"]
+    actions = ["Rename Column", "Handle Outliers", "Visualization", "Group By Two Columns", "Delete Rows/Columns"]
     selected_action = st.selectbox("Select Action for Numeric Column", actions, key=f"numeric_action_{selected_column}")
 
-    
+
     # Action: Rename Column
     if selected_action == "Rename Column":
         RenameColumn(df, selected_column)
@@ -269,6 +269,9 @@ def HandleNumericColumn(df, selected_column):
     elif selected_action == "Group By Two Columns":
         GroupByTwoColumns(df, selected_column)
 
+    elif selected_action == "Delete Rows/Columns":
+        DeleteRowsColumns(df, selected_column)
+    
 def ReplaceSpecificValues(df, selected_column):
     st.session_state["data"] = df
     unique_values = df[selected_column].unique()
