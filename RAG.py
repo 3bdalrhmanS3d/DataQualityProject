@@ -99,7 +99,7 @@ def main():
     def chat_with_rag():
         st.subheader("Chat with Dataset using RAG")
 
-        def ollama_generate(query: str, model: str = "llama3.2:latest") -> str:
+        def ollama_generate(query: str, model: str = "llama3.2:1b") -> str:
             """Generate a response using Ollama."""
             try:
                 result = ollama.chat(model=model, messages=[{"role": "user", "content": query}])
@@ -108,7 +108,7 @@ def main():
                 return f"Error: {e}"
 
         # Function to chat with CSV using Ollama
-        def chat_with_csv_ollama(df, prompt, model="llama3.2:latest", max_rows=10):
+        def chat_with_csv_ollama(df, prompt, model="llama3.2:1b", max_rows=10):
             """Chat with a CSV using Ollama."""
             # Summarize dataset: Include column names, row count, and sample rows
             summary = f"The dataset has {df.shape[0]} rows and {df.shape[1]} columns.\n"
@@ -196,6 +196,7 @@ def main():
             handle_duplicates()
         elif menu == "5. Advanced Data Analysis":
             AdvancedDataAnalysis()
+       
         elif menu == "6. Chat using RAG":
             chat_with_rag()
         
