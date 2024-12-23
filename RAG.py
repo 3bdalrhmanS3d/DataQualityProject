@@ -52,8 +52,8 @@ def main():
         dataset_info = {
             "Column Name": df.columns,
             "Non-Null Count": df.notnull().sum(),
-            "Missing Percentage (%)": df.isnull().mean() * 100,
-            "Unique Values": df.nunique(),
+            
+            
             "Data Type": df.dtypes
         }
         dataset_info_df = pd.DataFrame(dataset_info).reset_index(drop=True)

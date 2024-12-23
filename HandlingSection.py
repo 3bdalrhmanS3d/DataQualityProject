@@ -721,9 +721,23 @@ def correlation_analysis(df, target_column):
     """Perform correlation analysis on all columns and user-selected features."""
     st.subheader("Correlation Analysis")
     
+    # Preprocess the DataFrame: Convert non-numeric to NaN and drop problematic rows
+    df_numeric = df.select_dtypes(include=['float64', 'int64']).copy()
+    df_numeric = df_numeric.apply(pd.to_numeric, errors='coerce')  # Coerce non-numeric to NaN
+    
+    # Drop rows with all NaN values (optional)
+    if df_numeric.isnull().all(axis=1).any():
+        st.warning("Rows with all NaN values will be dropped for correlation analysis.")
+        df_numeric = df_numeric.dropna(how='all')
+    
+    # Check if the numeric DataFrame is empty after cleaning
+    if df_numeric.empty:
+        st.error("No valid numeric data available for correlation analysis after cleaning.")
+        return None
+    
     # All Columns Correlation
     st.write("### Correlation Matrix for All Columns")
-    correlation_matrix_all = df.corr()  # Calculate correlation for all numerical columns
+    correlation_matrix_all = df_numeric.corr()  # Calculate correlation for cleaned numeric columns
     st.table(correlation_matrix_all)
     fig_all, ax_all = plt.subplots(figsize=(10, 8))
     sns.heatmap(correlation_matrix_all, annot=True, cmap='coolwarm', ax=ax_all)
@@ -731,12 +745,12 @@ def correlation_analysis(df, target_column):
     
     # Custom Features Correlation
     st.write("### Custom Correlation Analysis")
-    numerical_columns = df.select_dtypes(include=['float64', 'int64']).columns
+    numerical_columns = df_numeric.columns
     selected_features = st.multiselect("Select Features for Correlation Analysis", numerical_columns)
     
     if selected_features:
         st.write("Correlation Matrix for Selected Features")
-        correlation_matrix_custom = df[selected_features].corr()
+        correlation_matrix_custom = df_numeric[selected_features].corr()
         st.table(correlation_matrix_custom)
         fig_custom, ax_custom = plt.subplots(figsize=(10, 8))
         sns.heatmap(correlation_matrix_custom, annot=True, cmap='coolwarm', ax=ax_custom)
@@ -745,6 +759,7 @@ def correlation_analysis(df, target_column):
     else:
         st.warning("Please select at least one feature for custom correlation analysis.")
         return None
+
 
 FeatureImportanceResult = namedtuple('FeatureImportanceResult', ['importance_scores', 'model_name'])
 def feature_importance(df, target_column):
