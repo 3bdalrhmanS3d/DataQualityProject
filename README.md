@@ -9,18 +9,37 @@ For those who wish to try the app, you can access it [here](https://dataqualityp
 
 ## Features
 
+### 1. Data Quality Analysis
 - **Dataset Upload:** Upload CSV or Excel files.
-- **Data Quality Tasks:** Perform the following tasks on the uploaded dataset:
-  - Dataset Info: View basic dataset information.
-  - Describe Dataset: Get descriptive statistics of the dataset.
-  - Handle Missing Values: Fill or drop missing values.
-  - Handle Duplicates: Identify and remove duplicate rows.
-  - Handle Outliers: Remove outliers using the Interquartile Range (IQR) method.
-- **Chat with Dataset:** Ask questions about the dataset using the RAG model powered by Ollama.
+- **Dataset Info:** View basic dataset information.
+- **Describe Dataset:** Get descriptive statistics of the dataset.
+- **Handle Missing Values:** Fill or drop missing values.
+- **Handle Duplicates:** Identify and remove duplicate rows.
+- **Outlier Detection:** Identify and handle outliers.
+- **Data Type Conversion:** Convert data types and normalize columns.
+
+### 2. Data Visualization
+- **Interactive Plots:** Bar plots, pie charts, histograms, box plots, scatter plots, line charts, area charts, and pair plots.
+- **Correlation Matrices:** View correlation between features.
+- **Distribution Analysis:** Analyze data distributions.
+- **Custom Color Palettes:** Choose from various color palettes for visualizations.
+
+### 3. Machine Learning
+- **Model Comparison:** Compare multiple models (Random Forest, SVM, Logistic Regression).
+- **Feature Importance:** Analyze feature importance using RandomForestClassifier.
+- **Cross-Validation:** Perform cross-validation to evaluate model performance.
+- **Model Performance Metrics:** View accuracy, F1 score, precision, and recall.
+- **Interactive Prediction Interface:** Make predictions on new data.
+
+### 4. RAG-powered Chat
+- **Dataset Querying:** Query the dataset using natural language.
+- **Context-Aware Responses:** Get context-aware responses from the dataset.
+- **Code Snippet Generation:** Generate code snippets for data analysis.
+- **Interactive Chat Interface:** Chat with the dataset using Ollama's RAG model.
 
 ## Prerequisites
 
-Before running the project, make sure you have Python 3.12 installed on your system.
+Before running the project, make sure you have Python 3.12 installed on your system and Ollama (for RAG features).
 
 ## Installation
 
@@ -78,11 +97,15 @@ Before running the project, make sure you have Python 3.12 installed on your sys
    The app will open in your default web browser.
 
 ## Project Structure
-
-- **RAG.py**: The main Streamlit application script that runs the web interface.
-- **requirements.txt**: A file listing the project dependencies (optional, for convenience).
-- **venv/**: Virtual environment directory (this will be created when you set up the virtual environment).
-
+```txt
+  DataQualityProject/
+  ├── RAG.py                 # Main application
+  ├── HandlingSection.py     # Data handling components
+  ├── PredictionManager.py   # ML model management
+  ├── Lib.py                # Common utilities
+  ├── requirements.txt      # Dependencies
+  └── README.md            # Documentation
+```
 ## Usage
 
 - Upload your dataset (CSV or Excel) via the sidebar.
@@ -107,15 +130,39 @@ After performing any changes, you can download the modified dataset by clicking 
 
 ---
 
+## Data Processing Features
+- Missing Values: Multiple imputation methods
+- Outliers: IQR-based detection and handling
+- Transformations: Scaling, encoding, normalization
+- Feature Engineering: Automated and manual options
+
+## Machine Learning Capabilities
+- Models:
+    - Random Forest
+    - Support Vector Machines
+    - Logistic Regression
+- Metrics:
+    - Accuracy
+    - F1 Score
+    - Precision
+    - Recall
+- Visualization:
+    - Confusion Matrix
+    - ROC Curves
+    - Feature Importance
+
 ## requirements.txt
 
 Here are the required libraries for this project:
 
 ```txt
-   streamlit
-   pandas
-   ollama
-   seaborn
-   matplotlib
-   missingno
+  streamlit
+  pandas
+  numpy
+  scikit-learn
+  matplotlib
+  seaborn
+  ollama
+  missingno
+  imbalanced-learn
 ```
