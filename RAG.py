@@ -3,7 +3,7 @@ import pandas as pd
 import ollama
 from io import StringIO
 from HandlingSection import *
-
+from Lib import *
 def main():
     # App Title
     st.title("Data Quality Analysis")
@@ -40,7 +40,7 @@ def main():
             "5. Advanced Data Analysis",
             "6. Make Predictions",
             "7. Chat using RAG" 
-            
+            ,"8. Show All Chandes"
         ])
 
     # Dataset Info
@@ -77,6 +77,10 @@ def main():
         else:
             st.warning("No categorical columns found in the dataset.")
 
+        n_rows = st.number_input("Number of rows to display", min_value=1, max_value=len(df), value=10)
+        st.subheader(f"First {n_rows} rows of the dataset")
+        st.table(df.head(n_rows))
+        
     def handle_missing_values():
         columns = [col for col in df.columns]
         selected_column = st.selectbox("Select column to handle:", ["All Columns"] + columns)
@@ -114,12 +118,20 @@ def main():
     # Handle Duplicates
     def handle_duplicates():
         st.subheader("Handle Duplicates")
-        duplicates = df.duplicated().sum()
-        st.write(f"Number of duplicate rows: {duplicates}")
-        if duplicates > 0 and st.button("Remove Duplicates"):
-            df.drop_duplicates(inplace=True)
-            st.success("Duplicates removed!")
-            st.write(f"Number of duplicate rows after removal: {df.duplicated().sum()}")
+        duplicates = df[df.duplicated()]
+        num_duplicates = duplicates.shape[0]
+        st.write(f"Number of duplicate rows: {num_duplicates}")
+
+        if num_duplicates > 0:
+            st.write("Duplicate rows:")
+            st.dataframe(duplicates)
+
+            if st.button("Remove Duplicates"):
+                log_change(f"Removed duplicates (Number of duplicate rows: {num_duplicates})", duplicates, df)
+                df.drop_duplicates(inplace=True)
+                st.session_state['data'] = df  # Save changes to session state
+                st.success("Duplicates removed!")
+                st.write(f"Number of duplicate rows after removal: {df.duplicated().sum()}")
 
 
     # Chat with RAG
@@ -226,7 +238,8 @@ def main():
             predict_new_use_case(df)
         elif menu == "7. Chat using RAG":
             chat_with_rag()
-        
+        elif menu == "8. Show All Chandes":
+            show_change_log()
 
 
     else:
@@ -240,6 +253,7 @@ def main():
         file_name=st.sidebar.text_input("Enter file name (with .csv extension):", value="modified_dataset.csv"),
         mime="text/csv"
     )
+    
 
     
 if __name__ == "__main__":

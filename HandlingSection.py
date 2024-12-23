@@ -10,8 +10,8 @@ from sklearn.compose import ColumnTransformer
 from scipy.stats import ttest_ind
 from collections import namedtuple
 from dataclasses import dataclass
+from datetime import datetime
 from PredictionManager import * 
-
 @dataclass
 class AnalysisConfig:
     features_to_include: list
@@ -24,6 +24,40 @@ def restore_original(df, key):
         return st.session_state[key].copy()
     st.warning(f"No backup found for {key}.")
     return None
+
+def log_change(operation: str, before: str, details: str):
+    """Log a change operation with timestamp"""
+    if 'change_log' not in st.session_state:
+        st.session_state.change_log = []
+    
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    st.session_state.change_log.append({
+        'timestamp': timestamp,
+        'operation': operation,
+        'Before': before,
+        'details': details
+    })
+
+# Add this function to display changes
+def show_change_log():
+    """Display the change log in the sidebar"""
+    if 'change_log' in st.session_state and st.session_state.change_log:
+        st.subheader("Change Log")
+        view_option = st.radio(
+            "View changes:",
+            ["Latest First", "Oldest First"]
+        )
+        
+        changes = st.session_state.change_log.copy()
+        if view_option == "Latest First":
+            changes.reverse()
+            
+        for change in changes:
+            with st.expander(f"{change['operation']} - {change['timestamp']}"):
+                st.write(change['Before'])
+                st.write(change['details'])
+    else:
+        st.info("No changes logged yet")
 
 def missing_value_analysis(df):
     """Enhanced analysis and presentation of missing values using charts"""
@@ -48,19 +82,19 @@ def missing_value_analysis(df):
         "Select Visualization Type",
         ["Bar Plot", "Matrix Plot", "Heatmap"]
     )
-    
+
     fig_size = st.slider("Select Plot Size", 5, 15, 10)
-    
+
     viz_type == "Bar Plot"
     fig, ax = plt.subplots(figsize=(fig_size, fig_size//2))
     msno.bar(df, ax=ax, color="skyblue")
     st.pyplot(fig)
-        
+
     viz_type == "Matrix Plot"
     fig, ax = plt.subplots(figsize=(fig_size, fig_size//2))
     msno.matrix(df, ax=ax)
     st.pyplot(fig)
-        
+
     viz_type == "Heatmap"
     fig, ax = plt.subplots(figsize=(fig_size, fig_size//2))
     sns.heatmap(df.isnull(), cbar=True, cmap="YlOrRd", ax=ax)
@@ -84,6 +118,14 @@ def handle_object_column(df, selected_column):
         else:
             st.write(f"Unique Values and Frequencies: { value_counts.count() }")   
             st.table(value_counts)
+        
+        # Download button for value counts
+        st.download_button(
+            label="Download Value Counts CSV",
+            data=value_counts.to_csv().encode('utf-8'),
+            file_name=f'{selected_column}_value_counts.csv',
+            mime='text/csv'
+        )
 
     if df[selected_column].dtype == 'object':
         actions = [
@@ -95,7 +137,6 @@ def handle_object_column(df, selected_column):
         "Visualization",
         "Delete Rows/Columns" ]
 
-    # Dictionary to hold descriptions of each action
     action_descriptions = {
         "Rename Column": "Allows you to rename the selected column.",
         "Normalize": "Scales the data in the selected column to a standard range (e.g., 0 to 1).",
@@ -105,7 +146,6 @@ def handle_object_column(df, selected_column):
         "Visualization": "Generates visualizations for the data in the selected column (e.g., histograms, line charts).",
         "Delete Rows/Columns": "Deletes specific rows or columns based on your selection."
     }
-
     selected_action = st.selectbox(
         f"Select Action to Perform for {selected_column}:",
         actions,
@@ -113,7 +153,7 @@ def handle_object_column(df, selected_column):
     )
     description = action_descriptions.get(selected_action, "No description available for this action.")
     st.write(f"**Description:** {description}")
-    
+
     if selected_action == "Rename Column":
         RenameColumn(df, selected_column)
     elif selected_action == "Normalize":
@@ -131,11 +171,11 @@ def handle_object_column(df, selected_column):
 
 def NormalizeColumn(df, selected_column):
     st.session_state["data"] = df
+    preview_df =df.copy()
     st.subheader(f"Normalize Column: {selected_column}")
     st.write("### Normalization Options")
 
     st.markdown("**Normalization allows you to clean and standardize the values in the selected column.** Below are the available options:")
-
     apply_strip = st.checkbox(
         "Remove leading and trailing spaces (strip)",
         value=True,
@@ -181,34 +221,27 @@ def NormalizeColumn(df, selected_column):
 
     space_replacement = "_"
     if apply_replace_spaces:
-        space_replacement = st.text_input(
-            "Enter the character to replace spaces with (default: _):",
-            value="_",
-            key=f"replacement_char_{selected_column}",
-            help="Specify the character that will replace spaces in the column."
-        )
+        space_replacement = st.text_input("Enter the character to replace spaces with (default: _):", value="_", key=f"replacement_char_{selected_column}",help="Specify the character that will replace spaces in the column.")
 
-    if st.button("Apply Normalization (Preview Only)", key=f"apply_normalization_{selected_column}"):
-        # Create a preview without altering the actual data
-        preview_df = df.copy()
-        try:
-            if apply_strip:
-                preview_df[selected_column] = preview_df[selected_column].str.strip()
-            if apply_lowercase:
-                preview_df[selected_column] = preview_df[selected_column].str.lower()
-            if apply_uppercase:
-                preview_df[selected_column] = preview_df[selected_column].str.upper()
-            if apply_replace_char and char_to_replace and replacement_character:
-                preview_df[selected_column] = preview_df[selected_column].str.replace(char_to_replace, replacement_character, regex=False)
-            if apply_replace_spaces and space_replacement:
-                preview_df[selected_column] = preview_df[selected_column].str.replace(" ", space_replacement, regex=False)
-            if apply_remove_all_spaces:
-                preview_df[selected_column] = preview_df[selected_column].str.replace(" ", "", regex=False)
-
-            st.write("Unique Values and Frequencies (Preview After Normalization):")
-            st.write(preview_df[selected_column].value_counts(dropna=False))
-        except Exception as e:
-            st.error(f"An error occurred during normalization: {e}")
+    # Create a preview without altering the actual data
+    preview_df = df.copy()
+    try:
+        if apply_strip:
+            preview_df[selected_column] = preview_df[selected_column].str.strip()
+        if apply_lowercase:
+            preview_df[selected_column] = preview_df[selected_column].str.lower()
+        if apply_replace_char and char_to_replace and replacement_character:
+            preview_df[selected_column] = preview_df[selected_column].str.replace(char_to_replace, replacement_character, regex=False)
+        if apply_replace_spaces and space_replacement:
+            preview_df[selected_column] = preview_df[selected_column].str.replace(" ", space_replacement, regex=False)
+        if apply_remove_all_spaces:
+            preview_df[selected_column] = preview_df[selected_column].str.replace(" ", "", regex=False)
+        if apply_uppercase:
+            preview_df[selected_column] = preview_df[selected_column].str.upper()
+        st.write("Unique Values and Frequencies (Preview After Normalization):")
+        st.write(preview_df[selected_column].value_counts(dropna=False))
+    except Exception as e:
+        st.error(f"An error occurred during normalization: {e}")
 
     if st.button("Save Changes", key=f"save_{selected_column}"):
         if f"original_{selected_column}" not in st.session_state:
@@ -217,22 +250,30 @@ def NormalizeColumn(df, selected_column):
         # Apply changes and save
         try:
             if apply_strip:
+                log_change(f"Remove leading and trailing spaces (strip) {selected_column}" , df[selected_column],preview_df[selected_column])
                 df[selected_column] = df[selected_column].str.strip()
+
             if apply_lowercase:
+                log_change(f"Convert to lowercase {selected_column}" , df[selected_column],preview_df[selected_column])
                 df[selected_column] = df[selected_column].str.lower()
-            if apply_uppercase:
-                df[selected_column] = df[selected_column].str.upper()
             if apply_replace_char and char_to_replace and replacement_character:
+                log_change(f"Replace specific character {selected_column} ", df[selected_column] ,preview_df[selected_column] )
                 df[selected_column] = df[selected_column].str.replace(char_to_replace, replacement_character, regex=False)
             if apply_replace_spaces and space_replacement:
+                log_change(f"Replace spaces {selected_column}", df[selected_column] ,preview_df[selected_column])
                 df[selected_column] = df[selected_column].str.replace(" ", space_replacement, regex=False)
             if apply_remove_all_spaces:
+                log_change(f"Remove all spaces from text  {selected_column}", df[selected_column] ,preview_df[selected_column])
                 df[selected_column] = df[selected_column].str.replace(" ", "", regex=False)
+            if apply_uppercase:
+                log_change(f"Convert to uppercase  {selected_column}", df[selected_column] ,preview_df[selected_column])
+                df[selected_column] = df[selected_column].str.upper()
 
             st.session_state["data"] = df
             st.success(f"Normalization changes saved for column '{selected_column}'.")
             st.write("Unique Values and Frequencies (After Saving):")
             st.write(df[selected_column].value_counts(dropna=False))
+            
         except Exception as e:
             st.error(f"An error occurred during saving: {e}")
 
@@ -243,6 +284,7 @@ def NormalizeColumn(df, selected_column):
             st.success(f"Restored original values for column '{selected_column}'.")
             st.write("Unique Values and Frequencies (After Restoration):")
             st.write(df[selected_column].value_counts())
+            log_change(f"Restore Original Values  {selected_column}" ,preview_df[selected_column], df[selected_column])
         else:
             st.warning("No original values saved to restore.")
 
@@ -250,9 +292,8 @@ def HandleNumericColumn(df, selected_column):
     st.subheader(f"Handling Numeric Column: {selected_column}")
 
     # Define actions
-    actions = ["Rename Column", "Handle Outliers", "Visualization", "Group By Two Columns"]
+    actions = ["Handel Missing","Rename Column",  "Handle Outliers","Visualization", "Group By Two Columns","Delete Rows/Columns"]
     selected_action = st.selectbox("Select Action for Numeric Column", actions, key=f"numeric_action_{selected_column}")
-
 
     # Action: Rename Column
     if selected_action == "Rename Column":
@@ -265,10 +306,15 @@ def HandleNumericColumn(df, selected_column):
     
     elif selected_action == "Handle Outliers":
         HandleOutliers(df, selected_column)
-
+    
+    elif selected_action == "Delete Rows/Columns":
+        DeleteRowsColumns(df, selected_column)
     # Action: Group By Two Columns
     elif selected_action == "Group By Two Columns":
         GroupByTwoColumns(df, selected_column)
+    
+    elif selected_action == "Handel Missing":
+        replace_column_values(df, selected_column)
 
 def ReplaceSpecificValues(df, selected_column):
     st.session_state["data"] = df
@@ -276,36 +322,40 @@ def ReplaceSpecificValues(df, selected_column):
     replace_from = st.selectbox("Select value to replace:", unique_values, key=f"replace_from_{selected_column}")
     replace_to = st.text_input("Replace with:", key=f"replace_to_{selected_column}")
 
-    if st.button("Save and Apply Replacement", key=f"save_apply_replace_{selected_column}"):
-        if replace_from and replace_to:
-            if f"original_{selected_column}" not in st.session_state:
-                st.session_state[f"original_{selected_column}"] = df[selected_column].copy()
+    if replace_from and replace_to:
+        if f"original_{selected_column}" not in st.session_state:
+            st.session_state[f"original_{selected_column}"] = df[selected_column].copy()
 
-            st.write("Value Frequencies (Before Replacement):")
-            fig, ax = plt.subplots()
-            df[selected_column].value_counts().plot(kind="bar", ax=ax)
-            ax.set_title(f"Value Frequencies for Column: {selected_column} (Before Replacement)")
-            ax.set_xlabel("Values")
-            ax.set_ylabel("Frequency")
-            st.pyplot(fig)
+        st.write("Value Frequencies (Before Replacement):")
+        fig, ax = plt.subplots()
+        df[selected_column].value_counts().plot(kind="bar", ax=ax)
+        ax.set_title(f"Value Frequencies for Column: {selected_column} (Before Replacement)")
+        ax.set_xlabel("Values")
+        ax.set_ylabel("Frequency")
+        st.pyplot(fig)
 
-            # Apply replacement
-            df[selected_column] = df[selected_column].replace(replace_from, replace_to)
+        # Apply replacement
+        preview_df = df.copy()
+        preview_df[selected_column] = preview_df[selected_column].replace(replace_from, replace_to)
+
+        st.write("Value Frequencies (After Replacement):")
+        fig, ax = plt.subplots()
+        preview_df[selected_column].value_counts().plot(kind="bar", ax=ax)
+        ax.set_title(f"Value Frequencies for Column: {selected_column} (After Replacement)")
+        ax.set_xlabel("Values")
+        ax.set_ylabel("Frequency")
+        st.pyplot(fig)
+
+        st.write("Unique Values and Frequencies (After Replacement):")
+        st.write(preview_df[selected_column].value_counts())
+
+        if st.button("Save and Apply Replacement", key=f"save_apply_replace_{selected_column}"):
+            log_change(f"Replace Specific Values  {selected_column}" , df[selected_column] ,preview_df[selected_column])
+            df[selected_column] = preview_df[selected_column]
             st.session_state["data"] = df
             st.success(f"Replaced '{replace_from}' with '{replace_to}' in column '{selected_column}'.")
-
-            st.write("Value Frequencies (After Replacement):")
-            fig, ax = plt.subplots()
-            df[selected_column].value_counts().plot(kind="bar", ax=ax)
-            ax.set_title(f"Value Frequencies for Column: {selected_column} (After Replacement)")
-            ax.set_xlabel("Values")
-            ax.set_ylabel("Frequency")
-            st.pyplot(fig)
-
-            st.write("Unique Values and Frequencies (After Replacement):")
-            st.write(df[selected_column].value_counts())
-        else:
-            st.error("Please provide both 'Replace from' and 'Replace with' values.")
+    else:
+        st.error("Please provide both 'Replace from' and 'Replace with' values.")
 
     if st.button("Restore Original Values", key=f"restore_replace_{selected_column}"):
         if f"original_{selected_column}" in st.session_state:
@@ -314,40 +364,50 @@ def ReplaceSpecificValues(df, selected_column):
             st.success(f"Restored original values in column '{selected_column}'.")
             st.write("Unique Values and Frequencies (After Restoration):")
             st.write(df[selected_column].value_counts())
+            log_change(f"Restore Original Values  {selected_column}" ,preview_df[selected_column], df[selected_column])
         else:
             st.warning("No original values saved to restore.")
 
 def ConvertToNumeric(df, selected_column):
     st.session_state["data"] = df
 
-    if st.button("Save and Convert to Numeric", key=f"save_convert_numeric_{selected_column}"):
+    
+    preview_df = df.copy()
+    try:
+        preview_df[selected_column] = pd.to_numeric(preview_df[selected_column], errors="coerce")
+        st.write("Unique Values and Frequencies (Preview After Conversion):")
+        st.write(preview_df[selected_column].value_counts(dropna=False))
+    except Exception as e:
+        st.error(f"Error converting to numeric: {e}")
+
+    if st.button("Save and Convert to Numeric", key=f"save_fill_{selected_column}"):
         if f"original_{selected_column}" not in st.session_state:
             st.session_state[f"original_{selected_column}"] = df[selected_column].copy()
 
         try:
+            log_change(f"Convert to Numeric  {selected_column}" , df[selected_column],preview_df[selected_column])
             df[selected_column] = pd.to_numeric(df[selected_column].replace(r'[^\d.]', '', regex=True), errors="coerce")
             st.session_state["data"] = df
             st.success(f"Converted column '{selected_column}' to numeric.")
             st.write("Column Statistics (After Conversion):")
             st.table(df[selected_column].describe())
+            
         except Exception as e:
             st.error(f"Error converting to numeric: {e}")
 
     if st.button("Restore Original Values", key=f"restore_numeric_{selected_column}"):
-        if f"original_{selected_column}" in st.session_state:
-            df[selected_column] = st.session_state[f"original_{selected_column}"]
-            st.session_state["data"] = df
-            st.success(f"Restored original values in column '{selected_column}'.")
-        else:
-            st.warning("No original values saved to restore.")
+        restore_column(df, selected_column)
+        log_change(f"Restore Original Values  {selected_column}" ,preview_df[selected_column], df[selected_column])
 
 def RenameColumn(df, selected_column):
     new_column_name = st.text_input(f"Enter new name for column '{selected_column}':", key=f"rename_{selected_column}")
     if st.button("Rename Column", key=f"apply_rename_{selected_column}"):
         if new_column_name:
+            log_change(f"Rename Column {selected_column}",selected_column, new_column_name)
             df.rename(columns={selected_column: new_column_name}, inplace=True)
             st.session_state["data"] = df
             st.success(f"Column '{selected_column}' has been renamed to '{new_column_name}'.")
+            
         else:
             st.error("Please provide a new column name.")
 
@@ -403,29 +463,40 @@ def HandleOutliers(df, selected_column):
     if lower_bound is not None and upper_bound is not None:
         outlier_method = st.selectbox("Select Outlier Handling Method", ['clip', 'drop'])
 
-    if st.button(f"Preview Filtered Data for {selected_column}"):
-        df = handle_outliers(df, selected_column, lower_bound, upper_bound, outlier_method)
-        st.session_state[f"preview_filtered_{selected_column}"] = df[selected_column].copy()
+        # Apply outlier handling method
+        preview_df = handle_outliers(df.copy(), selected_column, lower_bound, upper_bound, outlier_method)
+        st.session_state[f"preview_filtered_{selected_column}"] = preview_df[selected_column].copy()
 
-        st.success("Preview of filtered data based on custom range!")
+        st.success("Filtered data based on custom range!")
         st.write("Data Statistics After Filtering:")
-        st.write(df.describe())
+        st.write(preview_df.describe())
 
         st.write("Filtered Data Preview:")
-        st.dataframe(df)
+        st.dataframe(preview_df)
 
         # Visualization After Filtering
         st.write("Data Distribution After Filtering:")
         fig_after, ax_after = plt.subplots()
-        df[selected_column].plot(kind='box', ax=ax_after)
+        preview_df[selected_column].plot(kind='box', ax=ax_after)
         ax_after.set_title(f"Box Plot After Filtering for {selected_column}")
         st.pyplot(fig_after)
 
     if st.button(f"Save Filtered Data for {selected_column}"):
         if f"preview_filtered_{selected_column}" in st.session_state:
-            st.session_state[f"filtered_data_{selected_column}"] = st.session_state[f"preview_filtered_{selected_column}"].copy()
+            log_change(f"Handle Outliers {selected_column}", df[selected_column], st.session_state[f"preview_filtered_{selected_column}"])
+            df[selected_column] = st.session_state[f"preview_filtered_{selected_column}"].copy()
+            st.session_state[f"filtered_data_{selected_column}"] = df[selected_column].copy()
             st.success(f"Filtered data for column '{selected_column}' has been saved.")
             st.session_state["data"] = df
+
+    if st.button("Restore Original Values", key=f"restore_numeric_{selected_column}"):
+        if f"original_{selected_column}" in st.session_state:
+            df[selected_column] = st.session_state[f"original_{selected_column}"]
+            st.session_state["data"] = df
+            st.success(f"Restored original values in column '{selected_column}'.")
+            log_change(f"Restore Original Values  {selected_column}" ,preview_df[selected_column], df[selected_column])
+        else:
+            st.warning("No original values saved to restore.")
 
     
             
@@ -453,25 +524,30 @@ def DeleteRowsColumns(df, selected_column):
                     ax.set_xlabel("Values")
                     ax.set_ylabel("Frequency")
                     st.pyplot(fig)
-            except Exception as e:
-                st.warning(f"Error finding rows with value: {e}")
 
-        if st.button("Delete Rows", key=f"delete_rows_{selected_column}"):
-            try:
-                if "original_data" not in st.session_state:
-                    st.session_state["original_data"] = df.copy()
-
-                df = df[df[selected_column] != value_to_delete]
-                st.session_state["data"] = df
-                st.success(f"Rows where {selected_column} equals '{value_to_delete}' have been deleted.")
+                # Preview changes without saving
+                preview_df = df[df[selected_column] != value_to_delete]
+                st.write("### Data Preview After Deletion:")
+                st.dataframe(preview_df)
 
                 with st.expander("Visualization After Deletion"):
                     fig, ax = plt.subplots()
-                    df[selected_column].value_counts().plot(kind="bar", ax=ax, color="orange")
+                    preview_df[selected_column].value_counts().plot(kind="bar", ax=ax, color="orange")
                     ax.set_title(f"Value Frequencies for Column: {selected_column} (After Deletion)")
                     ax.set_xlabel("Values")
                     ax.set_ylabel("Frequency")
                     st.pyplot(fig)
+            except Exception as e:
+                st.warning(f"Error finding rows with value: {e}")
+
+        if st.button("Save Changes", key=f"save_delete_rows_{selected_column}"):
+            try:
+                if "original_data" not in st.session_state:
+                    st.session_state["original_data"] = df.copy()
+                log_change(f"Delete Rows {selected_column}", df, preview_df)
+                df = df[df[selected_column] != value_to_delete]
+                st.session_state["data"] = df
+                st.success(f"Rows where {selected_column} equals '{value_to_delete}' have been deleted.")
             except Exception as e:
                 st.error(f"Error deleting rows: {e}")
 
@@ -479,10 +555,15 @@ def DeleteRowsColumns(df, selected_column):
         st.write("### Values in Column Before Deletion:")
         st.dataframe(df[selected_column].head(10))
 
-        if st.button("Delete Column", key=f"delete_column_{selected_column}"):
+        # Preview changes without saving
+        preview_df = df.drop(columns=[selected_column])
+        st.write("### Data Preview After Column Deletion:")
+        st.dataframe(preview_df)
+
+        if st.button("Save Changes", key=f"save_delete_column_{selected_column}"):
             if "original_data" not in st.session_state:
                 st.session_state["original_data"] = df.copy()
-
+            log_change(f"Delete Column {selected_column}", df, preview_df)
             df.drop(columns=[selected_column], inplace=True)
             st.session_state["data"] = df
             st.success(f"Column '{selected_column}' has been deleted.")
@@ -635,6 +716,7 @@ def GroupByTwoColumns(df, selected_column):
 
 # Use namedtuple to provide structured and easy-to-read analysis results.
 CorrelationResult = namedtuple('CorrelationResult', ['correlation_matrix', 'features'])
+
 def correlation_analysis(df, target_column):
     """Perform correlation analysis on all columns and user-selected features."""
     st.subheader("Correlation Analysis")
@@ -797,17 +879,19 @@ def handle_transformations(df, selected_column):
                 st.dataframe(preview.describe())
                 
                 # Apply transformation button
-                if st.button("Apply Transformation"):
-                    if transform_type == "one_hot":
-                        # Drop original and add encoded columns
-                        df.drop(columns=[selected_column], inplace=True)
-                        for col in preview.columns:
-                            df[col] = preview[col]
-                    else:
-                        df[selected_column] = preview
-                    
-                    st.success(f"Transformation applied to {selected_column}")
-                    st.session_state["data"] = df
+            if st.button("Apply Transformation"):
+                if transform_type == "one_hot":
+                    # Drop original and add encoded columns
+                    log_change(f"Transform (one_hot) Column {selected_column}", df[selected_column],preview)
+                    df.drop(columns=[selected_column], inplace=True)
+                    for col in preview.columns:
+                        df[col] = preview[col]
+                else:
+                    log_change(f"Transform (label) Column {selected_column}", df[selected_column],preview)
+                    df[selected_column] = preview
+                
+                st.success(f"Transformation applied to {selected_column}")
+                st.session_state["data"] = df
                     
         except Exception as e:
             st.error(f"Error during transformation: {str(e)}")
@@ -818,9 +902,12 @@ def handle_transformations(df, selected_column):
             df[selected_column] = st.session_state[f"original_{selected_column}"]
             st.success(f"Restored original values for {selected_column}")
             st.session_state["data"] = df
+            log_change(f"Restore Original Values  {selected_column}" ,preview, df[selected_column])
 
 def replace_column_values(df, selected_column):
-    
+    with st.expander("View Unique Values"):
+        value_counts = df[selected_column].value_counts(dropna=False)
+        st.dataframe(value_counts)
     action = st.selectbox(
         "Select action to apply:",
         [
@@ -830,53 +917,77 @@ def replace_column_values(df, selected_column):
             "Fill NaN based on Categorical Target"
         ]
     )
-    st.session_state["data"] = df
+    
     if action == "Fill NaN based on Categorical Target":
-            target_col = st.selectbox("Select Categorical Target Column", df.columns)
+        target_col = st.selectbox("Select Categorical Target Column", df.columns)
 
-            # Ensure the target column is not one of the selected columns
-            if target_col in selected_column:
-                st.warning("The target column cannot be one of the selected columns. Please select a different column.")
-            else:
-                fill_action = st.selectbox("Choose fill action:", ["Mean", "Median", "Mode"])
-                
+        # Ensure the target column is not one of the selected columns
+        if target_col == selected_column:
+            st.warning("The target column cannot be one of the selected columns. Please select a different column.")
+        else:
+            fill_action = st.selectbox("Choose fill action:", ["Mean", "Median", "Mode"])
+            
+            
+            preview_df = df.copy()
+            if fill_action == "Mean":
+                preview_df[selected_column] = preview_df.groupby(target_col)[selected_column].transform(lambda x: x.fillna(x.mean()))
+            elif fill_action == "Median":
+                preview_df[selected_column] = preview_df.groupby(target_col)[selected_column].transform(lambda x: x.fillna(x.median()))
+            elif fill_action == "Mode":
+                preview_df[selected_column] = preview_df.groupby(target_col)[selected_column].transform(lambda x: x.fillna(x.mode()[0]))
+
+            with st.expander("View Unique Values"):
+                value_counts = preview_df[selected_column].value_counts(dropna=False)                    
+                st.dataframe(value_counts)
+
+            if st.button("Apply Fill Action"):
                 if fill_action == "Mean":
+                    log_change(f"Fill NaN based on Categorical Target {selected_column}", df[selected_column],preview_df[selected_column])
                     df[selected_column] = df.groupby(target_col)[selected_column].transform(lambda x: x.fillna(x.mean()))
                 elif fill_action == "Median":
+                    log_change(f"Fill NaN based on Categorical Target {selected_column}", df[selected_column],preview_df[selected_column])
                     df[selected_column] = df.groupby(target_col)[selected_column].transform(lambda x: x.fillna(x.median()))
                 elif fill_action == "Mode":
+                    log_change(f"Fill NaN based on Categorical Target {selected_column}", df[selected_column],preview_df[selected_column])
                     df[selected_column] = df.groupby(target_col)[selected_column].transform(lambda x: x.fillna(x.mode()[0]))
 
-            st.write(f"Filled NaN values in selected columns based on the '{target_col}' column using {fill_action}.")
+                st.write(f"Filled NaN values in selected columns based on the '{target_col}' column using {fill_action}.")
+                st.session_state["data"] = df
 
     else:
         
+        preview_df = df.copy()
         if action == "Fill with Mean":
-            df[selected_column].fillna(df[selected_column].mean(), inplace=True)
+            preview_df[selected_column].fillna(preview_df[selected_column].mean(), inplace=True)
         elif action == "Fill with Median":
-            df[selected_column].fillna(df[selected_column].median(), inplace=True)
+            preview_df[selected_column].fillna(preview_df[selected_column].median(), inplace=True)
         elif action == "Fill with Mode":
-            df[selected_column].fillna(df[selected_column].mode()[0], inplace=True)
-                
-                    
+            preview_df[selected_column].fillna(preview_df[selected_column].mode()[0], inplace=True)
+        
+        with st.expander("View Unique Values"):
+            value_counts = preview_df[selected_column].value_counts(dropna=False)                    
+            st.dataframe(value_counts)
 
-    if st.button("Save and Convert to Numeric", key=f"save_convert_numeric_{selected_column}"):
-        if f"original_{selected_column}" not in st.session_state:
-            st.session_state[f"original_{selected_column}"] = df[selected_column].copy()
-
-        try:
+        if st.button("Apply Fill Action"):
+            if action == "Fill with Mean":
+                log_change(f"Fill NaN based on Categorical Target {selected_column}", df[selected_column],preview_df[selected_column])
+                df[selected_column].fillna(df[selected_column].mean(), inplace=True)
+            elif action == "Fill with Median":
+                log_change(f"Fill NaN based on Categorical Target {selected_column}", df[selected_column],preview_df[selected_column])
+                df[selected_column].fillna(df[selected_column].median(), inplace=True)
+            elif action == "Fill with Mode":
+                log_change(f"Fill NaN based on Categorical Target {selected_column}", df[selected_column],preview_df[selected_column])
+                df[selected_column].fillna(df[selected_column].mode()[0], inplace=True)
             
             st.session_state["data"] = df
-            st.success(f"Converted column '{selected_column}' to {action}.")
-            st.write("Column Statistics (After Conversion):")
+            st.success(f"Filled NaN values in column '{selected_column}' using {action}.")
             st.write(df[selected_column].describe())
-        except Exception as e:
-            st.error(f"Error converting to numeric: {e}")
 
     if st.button("Restore Original Values", key=f"restore_numeric_{selected_column}"):
         if f"original_{selected_column}" in st.session_state:
             df[selected_column] = st.session_state[f"original_{selected_column}"]
             st.session_state["data"] = df
             st.success(f"Restored original values in column '{selected_column}'.")
+            log_change(f"Restore Original Values  {selected_column}" ,preview_df[selected_column], df[selected_column])
         else:
             st.warning("No original values saved to restore.")
