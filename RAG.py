@@ -45,15 +45,26 @@ def main():
 
     # Dataset Info
     def display_dataset_info():
+        """Display detailed information about the dataset."""
         st.markdown("### Dataset Information")
+        
+        # Create a DataFrame for dataset info
         dataset_info = {
-        "Column Name": df.columns,
-        "Non-Null Count": df.notnull().sum(),
-        "Data Type": df.dtypes
+            "Column Name": df.columns,
+            "Non-Null Count": df.notnull().sum(),
+            "Missing Percentage (%)": df.isnull().mean() * 100,
+            "Unique Values": df.nunique(),
+            "Data Type": df.dtypes
         }
-
-        dataset_info_df = pd.DataFrame(dataset_info).style.background_gradient(cmap="coolwarm")
-        st.table(dataset_info_df)
+        dataset_info_df = pd.DataFrame(dataset_info).reset_index(drop=True)
+        
+        # Add memory usage
+        memory_usage = df.memory_usage(deep=True).sum() / 1024 ** 2  # Convert to MB
+        st.markdown(f"#### Total Memory Usage: {memory_usage:.2f} MB, Shape: { df.shape} .")
+        
+        # Display dataset info as a table with gradient coloring
+        styled_info = dataset_info_df.style.background_gradient(cmap="coolwarm")
+        st.table(styled_info)
 
     def describe_dataset():
         """Display descriptive statistics for numeric and object columns separately."""
