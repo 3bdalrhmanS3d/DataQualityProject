@@ -46,10 +46,36 @@ def main():
     # Dataset Info
     def display_dataset_info():
         st.markdown("### Dataset Information")
-        buffer = StringIO()  # Create a StringIO buffer
-        df.info(buf=buffer)  # This fills the buffer with dataset info
-        info_string = buffer.getvalue()  # Get the string content from the buffer
-        st.text(info_string)
+        dataset_info = {
+        "Column Name": df.columns,
+        "Non-Null Count": df.notnull().sum(),
+        "Data Type": df.dtypes
+        }
+
+        dataset_info_df = pd.DataFrame(dataset_info).style.background_gradient(cmap="coolwarm")
+        st.table(dataset_info_df)
+
+    def describe_dataset():
+        """Display descriptive statistics for numeric and object columns separately."""
+        st.markdown("### Descriptive Statistics")
+
+        # Numeric columns
+        numeric_cols = df.select_dtypes(include=['float64', 'int64'])
+        if not numeric_cols.empty:
+            st.markdown("#### Numeric Columns")
+            styled_numeric = numeric_cols.describe().style.background_gradient(cmap="coolwarm")
+            st.table(styled_numeric)
+        else:
+            st.warning("No numeric columns found in the dataset.")
+
+        # Categorical columns
+        object_cols = df.select_dtypes(include=['object'])
+        if not object_cols.empty:
+            st.markdown("#### Categorical Columns")
+            styled_object = object_cols.describe().style.set_properties(**{'text-align': 'center'})
+            st.table(styled_object)
+        else:
+            st.warning("No categorical columns found in the dataset.")
 
     def handle_missing_values():
         columns = [col for col in df.columns]
@@ -189,8 +215,7 @@ def main():
         if menu == "1. Dataset Info":
             display_dataset_info()
         elif menu == "2. Describe Dataset":
-            st.subheader("Dataset Description")
-            st.write(df.describe())
+            describe_dataset()
         elif menu == "3. Handle Missing Values":
             handle_missing_values()
         elif menu == "4. Handle Duplicates":
