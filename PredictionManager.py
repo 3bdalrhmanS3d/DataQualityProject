@@ -127,7 +127,14 @@ def predict_new_use_case(df):
                         proba,
                         columns=st.session_state['trained_model'].classes_
                     )
-                    st.dataframe(proba_df)
+                    predicted_class = st.session_state['trained_model'].predict(input_data)[0]  # Get the predicted class
+
+                    if predicted_class == 0:
+                        st.write("😢 **Unfortunately, the prediction indicates a negative outcome. Stay strong!**")
+                        st.image("E:\DataMining\Breast_Cancer\R2.png", caption="Negative Outcome") 
+                    elif predicted_class == 1:
+                        st.write("🎉 **Congratulations! The prediction indicates a positive outcome!**")
+                        st.image("E:\DataMining\Breast_Cancer\R1.png.", caption="Positive Outcome")
                     
                 except Exception as e:
                     st.error(f"Error making prediction: {str(e)}")
