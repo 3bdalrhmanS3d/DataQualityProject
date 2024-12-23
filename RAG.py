@@ -4,16 +4,18 @@ import ollama
 from io import StringIO
 from HandlingSection import *
 
-def main():
-    # App Title
-    st.title("Data Quality Analysis")
-    st.markdown("### The goal is to build a software that helps the user to work on the data at their own level")
+def update_title(task_name):
+    """Update the page title based on the selected task."""
+    st.title(task_name)
+    #st.markdown(f"### {task_name}")
 
-    # Dataset upload
-    uploaded_file = st.sidebar.file_uploader("Upload your dataset", type=["csv", "xlsx"])
+def upload_dataset():
+    """Handle dataset upload and session state management."""
+    
+    uploaded_file = st.sidebar.file_uploader("Choose a CSV or Excel file", type=["csv", "xlsx"])
     df = None
     if uploaded_file is not None:
-        if 'data' not in st.session_state :
+        if 'data' not in st.session_state:
             try:
                 if uploaded_file.name.endswith('.csv'):
                     DataFromCSV = StringIO(uploaded_file.getvalue().decode("utf-8"))
@@ -22,25 +24,31 @@ def main():
                     df = pd.read_excel(uploaded_file)
 
                 st.session_state['data'] = df
-                st.sidebar.success("Dataset uploaded successfully!")
+                st.success("Dataset uploaded successfully!")
 
             except Exception as e:
                 st.error("Error reading file: " + str(e))
         else:
             df = st.session_state['data'].copy()
+    return df
+
+def main():
+    """Main function for the Data Quality Analysis app."""   
+
+    df = upload_dataset()
 
     # Sidebar for navigation
     with st.sidebar:
         st.subheader("Navigation")
         menu = st.radio("Choose a task:", [
-            "1. Dataset Info",
-            "2. Describe Dataset",
-            "3. Handle Missing Values",
-            "4. Handle Duplicates",
-            "5. Advanced Data Analysis",
-            "6. Make Predictions",
-            "7. Chat using RAG" 
-            ,"8. Show All Chandes"
+            "Dataset Info",
+            "Describe Dataset",
+            "Handle Missing Values",
+            "Handle Duplicates",
+            "Advanced Data Analysis",
+            "Make Predictions",
+            "Chat using RAG",
+            "Show All Changes"
         ])
 
     # Dataset Info
@@ -102,6 +110,10 @@ def main():
         else:
             if df[selected_column].dtype in ['int64', 'float64']:
                 HandleNumericColumn(df,selected_column )
+                
+            elif df[selected_column].dtype == 'bool':
+                HandleBooleanColumn(df, selected_column)
+
             else :
                 handle_object_column(df, selected_column)
 
@@ -235,26 +247,40 @@ def main():
 
     # Task Navigation
     if df is not None:
-        if menu == "1. Dataset Info":
+        if menu == "Dataset Info":
+            update_title("Dataset Info")
             display_dataset_info()
-        elif menu == "2. Describe Dataset":
+        elif menu == "Describe Dataset":
+            update_title("Describe Dataset")
             describe_dataset()
-        elif menu == "3. Handle Missing Values":
+        elif menu == "Handle Missing Values":
+            update_title("Handle Missing Values")
             handle_missing_values()
-        elif menu == "4. Handle Duplicates":
+        elif menu == "Handle Duplicates":
+            update_title("Handle Duplicates")
             handle_duplicates()
-        elif menu == "5. Advanced Data Analysis":
+        elif menu == "Advanced Data Analysis":
+            update_title("Advanced Data Analysis")
             AdvancedDataAnalysis()
-        elif menu == "6. Make Predictions":
+        elif menu == "Make Predictions":
+            update_title("Make Predictions")
             predict_new_use_case(df)
-        elif menu == "7. Chat using RAG":
+        elif menu == "Chat using RAG":
+            update_title("Chat using RAG")
             chat_with_rag()
-        elif menu == "8. Show All Chandes":
+        elif menu == "Show All Changes":
+            update_title("Show All Changes")
             show_change_log()
-
-
     else:
+        update_title("Data Quality Analysis")
+        st.markdown("""
+            
+            ## This is a Python-based web application built using Streamlit for performing common data quality tasks such as handling missing values, duplicates, and outliers in datasets, The app also integrates with Ollama for a chatbot interface to interact with the dataset and answer questions using a Retrieval-Augmented Generation (RAG) model.
+                    
+                    
+            """)
         st.info("Upload a dataset to begin.")
+        
 
     # Download modified dataset
     if df is not None:
