@@ -67,11 +67,15 @@ def missing_value_analysis(df):
     # Calculate missing values
     missing_values = df.isnull().sum()
     missing_percentage = (missing_values / len(df)) * 100
+    non_missing_values = len(df) - missing_values
+    non_missing_percentage = 100 - missing_percentage
     
     # Create a summary DataFrame
     missing_summary = pd.DataFrame({
         'Missing Values': missing_values,
-        'Percentage': missing_percentage.round(2)
+        'Percentage': missing_percentage.round(2),
+        'Non-Missing Values': non_missing_values,
+        'Percentage Non-Missing': non_missing_percentage.round(2)
     })
     
     # Display summary with improved formatting
@@ -81,25 +85,41 @@ def missing_value_analysis(df):
     # Visualization options
     viz_type = st.selectbox(
         "Select Visualization Type",
-        ["Bar Plot", "Matrix Plot", "Heatmap"]
+        [ "Stacked Bar Chart", "Bar Plot", "Matrix Plot", "Heatmap"]
     )
-
+    ########################################
     fig_size = st.slider("Select Plot Size", 5, 15, 10)
-
+    viz_type == "Stacked Bar Chart"
+    st.write("### Stacked Bar Chart")
+    st.write("A stacked bar chart showing missing and non-missing values for each column.")
+    
+    # Prepare data for stacked bar chart
+    plot_data = pd.DataFrame({
+        'Missing': missing_values,
+        'Non-Missing': non_missing_values
+    }, index=df.columns)
+    
+    fig, ax = plt.subplots(figsize=(fig_size, fig_size // 2))
+    plot_data.plot(kind='bar', stacked=True, ax=ax, color=["orange", "green"])
+    ax.set_title("Missing vs Non-Missing Values")
+    ax.set_ylabel("Count")
+    ax.legend(["Missing", "Non-Missing"])
+    st.pyplot(fig)
+    ########################################
     viz_type == "Bar Plot"
     st.write("### Bar Plot")
     st.write("A bar plot shows the number of missing values for each column.")
     fig, ax = plt.subplots(figsize=(fig_size, fig_size//2))
     msno.bar(df, ax=ax, color="skyblue")
     st.pyplot(fig)
-
+    ########################################
     viz_type == "Matrix Plot"
     st.write("### Matrix Plot")
     st.write("A matrix plot shows the pattern of missing values in the dataset.")
     fig, ax = plt.subplots(figsize=(fig_size, fig_size//2))
     msno.matrix(df, ax=ax)
     st.pyplot(fig)
-
+    ########################################
     viz_type == "Heatmap"
     st.write("### Heatmap")
     st.write("A heatmap shows the presence of missing values in the dataset, with colors indicating the missingness.")
@@ -1074,3 +1094,48 @@ def HandleBooleanColumn(df, selected_column):
             log_change("Restore Original Values", "N/A", f"Restored original values for column: {selected_column}")
         else:
             st.warning("No original values saved to restore.")
+
+def Handle_Duplicates():
+    df = st.session_state['data']
+    st.subheader("Handle Duplicates")
+    duplicates = df[df.duplicated()]
+    num_duplicates = duplicates.shape[0]
+    st.write(f"Number of duplicate rows: {num_duplicates}")
+
+    if num_duplicates > 0:
+        st.write("Duplicate rows:")
+        st.dataframe(duplicates)
+
+        # Visualization before removal
+        st.write("### Data Before Removing Duplicates")
+        st.write("Descriptive Statistics:")
+        st.table(df.describe())
+        st.write("Data Preview:")
+        st.dataframe(df.head())
+
+        if st.button("Remove Duplicates"):
+            log_change(f"Removed duplicates (Number of duplicate rows: {num_duplicates})", duplicates, df)
+            df.drop_duplicates(inplace=True)
+            st.session_state['data'] = df  # Save changes to session state
+            st.success("Duplicates removed!")
+            st.write(f"Number of duplicate rows after removal: {df.duplicated().sum()}")
+
+            # Visualization after removal
+            st.write("### Data After Removing Duplicates")
+            st.write("Descriptive Statistics:")
+            st.table(df.describe())
+            st.write("Data Preview:")
+            st.dataframe(df.head())
+
+            if st.button("Restore Original Data"):
+                if 'original_data' in st.session_state:
+                    df = st.session_state['original_data'].copy()
+                    st.session_state['data'] = df
+                    st.success("Original data restored.")
+                    st.write("### Restored Data")
+                    st.write("Descriptive Statistics:")
+                    st.table(df.describe())
+                    st.write("Data Preview:")
+                    st.dataframe(df.head())
+                else:
+                    st.warning("No original data to restore.")

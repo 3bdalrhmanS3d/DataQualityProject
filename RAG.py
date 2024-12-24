@@ -141,20 +141,7 @@ def main():
     # Handle Duplicates
     def handle_duplicates():
         st.subheader("Handle Duplicates")
-        duplicates = df[df.duplicated()]
-        num_duplicates = duplicates.shape[0]
-        st.write(f"Number of duplicate rows: {num_duplicates}")
-
-        if num_duplicates > 0:
-            st.write("Duplicate rows:")
-            st.dataframe(duplicates)
-
-            if st.button("Remove Duplicates"):
-                log_change(f"Removed duplicates (Number of duplicate rows: {num_duplicates})", duplicates, df)
-                df.drop_duplicates(inplace=True)
-                st.session_state['data'] = df  # Save changes to session state
-                st.success("Duplicates removed!")
-                st.write(f"Number of duplicate rows after removal: {df.duplicated().sum()}")
+        Handle_Duplicates()
 
 
     # Chat with RAG
