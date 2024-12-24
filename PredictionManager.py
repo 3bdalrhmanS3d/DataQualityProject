@@ -4,6 +4,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, f1_score, precision_score, recall_score
 import streamlit as st
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from imblearn.over_sampling import SMOTE
@@ -51,9 +52,9 @@ def predict_new_use_case(df):
         # Compare Models
         if st.button("Compare Models"):
             models = {
-                "Random Forest": RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth, random_state=42),
-                "SVM": SVC(probability=True, random_state=42),
-                "Logistic Regression": LogisticRegression(random_state=42)
+            "Random Forest": RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth, random_state=42),
+            "SVM": SVC(probability=True, random_state=42),
+            "Logistic Regression": LogisticRegression(random_state=42)
             }
             results = []
             for model_name, model in models.items():
@@ -71,6 +72,25 @@ def predict_new_use_case(df):
             results_df = pd.DataFrame(results)
             st.write("### Model Performance Comparison")
             st.table(results_df)
+
+            # Plot Performance Comparison
+            fig, ax = plt.subplots(figsize=(10, 6))
+            index = np.arange(len(results_df))
+            bar_width = 0.2
+            opacity = 0.8
+
+            rects1 = plt.bar(index, results_df['Accuracy'], bar_width, alpha=opacity, color='b', label='Accuracy')
+            rects2 = plt.bar(index + bar_width, results_df['F1 Score'], bar_width, alpha=opacity, color='g', label='F1 Score')
+            rects3 = plt.bar(index + 2 * bar_width, results_df['Precision'], bar_width, alpha=opacity, color='r', label='Precision')
+            rects4 = plt.bar(index + 3 * bar_width, results_df['Recall'], bar_width, alpha=opacity, color='y', label='Recall')
+
+            plt.xlabel('Models')
+            plt.ylabel('Scores')
+            plt.title('Model Performance Comparison')
+            plt.xticks(index + bar_width, results_df['Model'])
+            plt.legend()
+
+            st.pyplot(fig)
 
             # Highlight Best Model
             best_model = results_df.loc[results_df['F1 Score'].idxmax()]
@@ -134,7 +154,7 @@ def predict_new_use_case(df):
                         st.image("R2.png", caption="Negative Outcome") 
                     elif predicted_class == 1:
                         st.write("🎉 **Congratulations! The prediction indicates a positive outcome!**")
-                        st.image("R1.png.", caption="Positive Outcome")
+                        st.image("R1.png", caption="Positive Outcome")
                     
                 except Exception as e:
                     st.error(f"Error making prediction: {str(e)}")
