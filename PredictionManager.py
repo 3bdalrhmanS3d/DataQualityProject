@@ -1,3 +1,4 @@
+from sklearn import metrics
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
@@ -95,6 +96,24 @@ def predict_new_use_case(df):
             # Highlight Best Model
             best_model = results_df.loc[results_df['F1 Score'].idxmax()]
             st.success(f"The best model is {best_model['Model']} with F1 Score: {best_model['F1 Score']:.2f}")
+
+            # Plot ROC Curves
+            st.write("### ROC Curves")
+            plt.figure(figsize=(10, 6))
+            for model_name, model in models.items():
+                y_pred_proba = model.predict_proba(pred_manager.X_test)[:, 1]
+                fpr, tpr, _ = metrics.roc_curve(pred_manager.y_test, y_pred_proba)
+                auc = metrics.roc_auc_score(pred_manager.y_test, y_pred_proba)
+                plt.plot(fpr, tpr, label=f'{model_name} (AUC = {auc:.2f})')
+
+            plt.plot([0, 1], [0, 1], 'r--')
+            plt.xlim([-0.01, 1.0])
+            plt.ylim([0.0, 1.05])
+            plt.xlabel('1 - Specificity (False Positive Rate)', fontsize=12)
+            plt.ylabel('Sensitivity (True Positive Rate)', fontsize=12)
+            plt.title('ROC Curves', fontsize=12)
+            plt.legend(loc="lower right", fontsize=12)
+            st.pyplot(plt)
 
         # Train Single Model
         if st.button("Train Model"):
