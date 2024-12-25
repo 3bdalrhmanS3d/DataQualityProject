@@ -6,7 +6,7 @@ For those who wish to try the app, you can access it [here](https://dataqualityp
 
 ## Demo Video
 
-Watch the [demo video](https://github.com/3bdalrhmanS3d/DataQualityProject/tree/main/demo.mp4)
+Watch the [demo](https://drive.google.com/file/d/1XfPMpp-l4iARA2FLsFLykLxrSUOTCEgC/view?usp=sharing)
 
 ## Features
 
